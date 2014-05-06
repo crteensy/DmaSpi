@@ -1,8 +1,8 @@
 #include <ChipSelect.h>
 #include <DmaSpi.h>
 
-// create a chip select object. This one uses the pin that the built-in LED is connected to.
-ActiveLowChipSelect<LED_BUILTIN> cs;
+// create a chip select object. This one uses pin 14.
+ActiveLowChipSelect<14> cs;
 
 void setup() {
   DMASPI0.begin();
