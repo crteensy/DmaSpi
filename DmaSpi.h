@@ -8,8 +8,6 @@
 
 #define DMASPI0_TXCHAN 1
 #define DMASPI0_RXCHAN 0
-#define MAKE_DMA_CHAN_ISR(n) void dma_ch ## n ## _isr()
-#define DMA_CHAN_ISR(n)  MAKE_DMA_CHAN_ISR(n)
 
 class DmaSpi0
 {
