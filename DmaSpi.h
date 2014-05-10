@@ -4,10 +4,14 @@
 #include <stdint.h>
 #include <util/atomic.h>
 
+#include <WProgram.h>
+
 #include "ChipSelect.h"
 
 #define DMASPI0_TXCHAN 1
 #define DMASPI0_RXCHAN 0
+#define MAKE_DMA_CHAN_ISR(n) void dma_ch ## n ## _isr()
+#define DMA_CHAN_ISR(n)  MAKE_DMA_CHAN_ISR(n)
 
 class DmaSpi0
 {
@@ -102,7 +106,7 @@ class DmaSpi0
       SPI0_MCR = SPI_MCR_MSTR | SPI_MCR_DCONF(0) | SPI_MCR_CLR_TXF | SPI_MCR_CLR_RXF;
 
       // configure default transfer attributes
-      SPI0_CTAR0 = SPI_CTAR_FMSZ(7) | SPI_CTAR_PBR(0) | SPI_CTAR_BR(0);
+//      SPI0_CTAR0 = SPI_CTAR_FMSZ(7) | SPI_CTAR_PBR(0) | SPI_CTAR_BR(0);
 
       // turn on DMAMUX and DMA
       SIM_SCGC6 |= SIM_SCGC6_DMAMUX;
@@ -151,6 +155,34 @@ class DmaSpi0
       return (m_pCurrentTransfer != nullptr);
     }
 
+    static void pause()
+    {
+      pause_ = true;
+    }
+
+    static bool paused()
+    {
+      return (pause_ && (!busy()));
+    }
+
+    static void releaseSpi()
+    {
+      SPI0_RSER = 0;
+    }
+
+    static void resume()
+    {
+      // clear pending flags and re-enable requests
+      SPI0_SR = 0xFF0F0000;
+      SPI0_RSER = SPI_RSER_TFFF_RE | SPI_RSER_TFFF_DIRS | SPI_RSER_RFDF_RE | SPI_RSER_RFDF_DIRS;
+      pause_ = false;
+      beginNextTransfer();
+    }
+
+    static void backupSpi()
+    {
+    }
+
     static void m_rxIsr()
     {
       // transfer finished, start next one if available
@@ -162,14 +194,14 @@ class DmaSpi0
 
       if (m_pCurrentTransfer->m_pSelect != nullptr)
       {
-        AbstractChipSelect& cb = *(m_pCurrentTransfer->m_pSelect);
-        cb.deselect();
+        m_pCurrentTransfer->m_pSelect->deselect();
         SPI0_CTAR0 = m_ctarBackup;
       }
       m_pCurrentTransfer->m_state = Transfer::State::done;
       m_pCurrentTransfer = nullptr;
       beginNextTransfer();
     }
+
     static void write(const uint8_t& val)
     {
       Transfer transfer(nullptr, 1, nullptr, val, nullptr);
@@ -177,6 +209,7 @@ class DmaSpi0
       while(transfer.busy())
       ;
     }
+
     static uint8_t read(const uint32_t& flagsVal)
     {
       volatile uint8_t result;
@@ -186,10 +219,11 @@ class DmaSpi0
       ;
       return result;
     }
+
   private:
     static void beginNextTransfer()
     {
-      if (m_pNextTransfer == nullptr)
+      if ((m_pNextTransfer == nullptr) || (pause_ == true))
       {
         /** TBD: UNLOCK SPI **/
         return;
@@ -257,6 +291,7 @@ class DmaSpi0
     static Transfer* volatile m_pNextTransfer;
     static Transfer* volatile m_pLastTransfer;
     static volatile uint8_t m_devNull;
+    static bool pause_;
 };
 
 extern DmaSpi0 DMASPI0;
