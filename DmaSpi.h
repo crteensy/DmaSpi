@@ -13,6 +13,8 @@
 #define MAKE_DMA_CHAN_ISR(n) void dma_ch ## n ## _isr()
 #define DMA_CHAN_ISR(n)  MAKE_DMA_CHAN_ISR(n)
 
+#include "DmaSpiBackup.h"
+
 class DmaSpi0
 {
   public:
@@ -87,6 +89,7 @@ class DmaSpi0
 
     static void begin()
     {
+      spiBackup_.create();
       // configure SPI0
       SIM_SCGC6 |= SIM_SCGC6_SPI0;
 
@@ -148,6 +151,8 @@ class DmaSpi0
       DMA_TCD0_SLAST = 0;
       DMA_TCD0_DLASTSGA = 0;
       DMA_TCD0_CSR = DMA_TCD_CSR_DREQ | DMA_TCD_CSR_INTMAJOR;
+
+      dmaSpiBackup_.create();
     }
 
     static bool busy()
@@ -167,20 +172,14 @@ class DmaSpi0
 
     static void releaseSpi()
     {
-      SPI0_RSER = 0;
+      spiBackup_.restore();
     }
 
     static void resume()
     {
-      // clear pending flags and re-enable requests
-      SPI0_SR = 0xFF0F0000;
-      SPI0_RSER = SPI_RSER_TFFF_RE | SPI_RSER_TFFF_DIRS | SPI_RSER_RFDF_RE | SPI_RSER_RFDF_DIRS;
+      dmsSpiBackup_.restore();
       pause_ = false;
       beginNextTransfer();
-    }
-
-    static void backupSpi()
-    {
     }
 
     static void m_rxIsr()
@@ -292,6 +291,8 @@ class DmaSpi0
     static Transfer* volatile m_pLastTransfer;
     static volatile uint8_t m_devNull;
     static bool pause_;
+    static SpiBackup spiBackup_;
+    static SpiBackup dmaSpiBackup_;
 };
 
 extern DmaSpi0 DMASPI0;
