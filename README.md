@@ -23,7 +23,7 @@ If you have downloaded this library from github (https://github.com/crteensy/Dma
 
 Here's how:
 - download zip file, the filename should be DmaSpi-teensyduino_1.20_RC2.zip
-- unzip where you like, and rename the resulting folder (DmaSpi-master) to DmaSpi
+- unzip where you like, and rename the resulting folder to DmaSpi
 - move that folder to your folder for contributed arduino libraries; see http://arduino.cc/en/Guide/Libraries -> Manual Installation for instructions
 - restart your arduino IDE if it was running
 
