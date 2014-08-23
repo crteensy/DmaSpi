@@ -22,40 +22,38 @@ class DummyChipSelect : public AbstractChipSelect
 
 /** An active low chip select class. This also configures the pin once.
 **/
-template<unsigned int pin>
 class ActiveLowChipSelect : public AbstractChipSelect
 {
   public:
-    ActiveLowChipSelect()
+    ActiveLowChipSelect(const unsigned int& pin, const SPISettings& settings)
+      : pin_(pin),
+      settings_(settings)
     {
-      static Init init; // configure the pin
+      pinMode(pin, OUTPUT);
+      digitalWriteFast(pin, 1);
     }
     void select() override
     {
-      digitalWriteFast(pin, 0);
+      Serial.printf("Selecting on pin %02u\n", pin_);
+      applySpiSettings(settings_);
+      digitalWriteFast(pin_, 0);
     }
     void deselect() override
     {
-      digitalWriteFast(pin, 1);
+      Serial.printf("Deselecting on pin %02u\n", pin_);
+      applySpiSettings(SPISettings());
+      digitalWriteFast(pin_, 1);
     }
   private:
-    /** Configures a pin as output, high **/
-    class Init
+    void applySpiSettings(const SPISettings& settings)
     {
-      public:
-        Init()
-        {
-          pinMode(pin, OUTPUT);
-          digitalWriteFast(pin, 1);
-        }
-    };
+      SPI.endTransaction();
+      SPI.beginTransaction(settings);
+    }
+    const unsigned int pin_;
+    const SPISettings& settings_;
 
-//    static Init m_init;
 };
-
-//template<unsigned int pin>
-//typename ActiveLowChipSelect<pin>::Init ActiveLowChipSelect<pin>::m_init;
-
 
 #endif // CHIPSELECT_H
 
