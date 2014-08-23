@@ -10,10 +10,8 @@ This branch is currently in development and will change a lot in the coming week
 - interrupt vector table in RAM
 
 This is a library for teensyduino that facilitates the use of SPI0 with DMA. In its current state, it's dead simple and uses the following hardware resources:
-- SPI0
-- SPI0_CTAR0 for transfer attributes
-- DMA channels 0 and 1 for Rx and Tx, respectively
-- DMA channel 0 ISR
+- SPI0, using SPI transactions
+- 2 dynamically allocated DMA channels
 
 The library comes with a set of utility classes for selecting slaves, see ChipSelect.h
 
