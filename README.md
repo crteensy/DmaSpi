@@ -4,6 +4,8 @@ DmaSpi
 DMA SPI for the Teensy 3.0/3.1
 Branch for teensyduino 1.20 RC2
 
+Discussion thread: http://forum.pjrc.com/threads/26479-DmaSpi-for-teensyduino-1-20-RC2
+
 This branch is currently in development and will change a lot in the coming weeks (starting somewhen after August 17th, 2014, but not earlier). It will make use of the following teensyduino 1.20 RC2 features:
 - SPI transactions,
 - dynamic DMA channel allocation,
