@@ -34,13 +34,13 @@ class ActiveLowChipSelect : public AbstractChipSelect
     }
     void select() override
     {
-      Serial.printf("Selecting on pin %02u\n", pin_);
+//      Serial.printf("Selecting on pin %02u\n", pin_);
       applySpiSettings(settings_);
       digitalWriteFast(pin_, 0);
     }
     void deselect() override
     {
-      Serial.printf("Deselecting on pin %02u\n", pin_);
+//      Serial.printf("Deselecting on pin %02u\n", pin_);
       applySpiSettings(SPISettings());
       digitalWriteFast(pin_, 1);
     }
