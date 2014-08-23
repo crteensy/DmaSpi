@@ -15,15 +15,6 @@ This is a library for teensyduino that facilitates the use of SPI0 with DMA. In 
 - DMA channels 0 and 1 for Rx and Tx, respectively
 - DMA channel 0 ISR
 
-The library comes with a set of utility classes for selecting slaves. This is needed to overcome a bug in the chip's silicon, but also adds flexibility.
+The library comes with a set of utility classes for selecting slaves, see ChipSelect.h
 
-Installation instructions for the arduino IDE
----------------------------------------------
-If you have downloaded this library from github (https://github.com/crteensy/DmaSpi), you will need to install the library manually, because the automatically generated zip filename breaks arduino compatibility.
-
-Here's how:
-- download zip file, the filename should be DmaSpi-teensyduino_1.20_RC2.zip
-- unzip where you like, and rename the resulting folder to DmaSpi
-- move that folder to your folder for contributed arduino libraries; see http://arduino.cc/en/Guide/Libraries -> Manual Installation for instructions
-- restart your arduino IDE if it was running
-
+Examples will follow soon.

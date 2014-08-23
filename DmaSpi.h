@@ -1,19 +1,16 @@
 #ifndef DMASPI_H
 #define DMASPI_H
 
-#include <stdint.h>
+#include <Arduino.h>
 #include <util/atomic.h>
 
-#include <WProgram.h>
+#if(!defined(__arm__) && defined(TEENSYDUINO))
+  #error This library is for teensyduino 1.20 on Teensy 3.0 and 3.1 only.
+#endif
 
+#include "SPI.h"
+#include "DMAChannel.h"
 #include "ChipSelect.h"
-
-#define DMASPI0_TXCHAN 1
-#define DMASPI0_RXCHAN 0
-#define MAKE_DMA_CHAN_ISR(n) void dma_ch ## n ## _isr()
-#define DMA_CHAN_ISR(n)  MAKE_DMA_CHAN_ISR(n)
-
-#include "DmaSpiBackup.h"
 
 class DmaSpi0
 {
@@ -24,9 +21,10 @@ class DmaSpi0
         enum State
         {
           idle,
-          done,
+          eDone,
           pending,
-          inProgress
+          inProgress,
+          error
         };
         Transfer(const uint8_t* pSource = nullptr,
                     const uint16_t& size = 0,
@@ -34,13 +32,17 @@ class DmaSpi0
                     const uint8_t& fill = 0,
                     AbstractChipSelect* cb = nullptr
         ) : m_state(State::idle),
-        m_pSource(pSource),
-        m_size(size),
-        m_pDest(pDest),
-        m_fill(fill),
-        m_pNext(nullptr),
-        m_pSelect(cb) {};
-        bool busy() const {return ((m_state == State::pending) || (m_state == State::inProgress));}
+          m_pSource(pSource),
+          m_size(size),
+          m_pDest(pDest),
+          m_fill(fill),
+          m_pNext(nullptr),
+          m_pSelect(cb)
+        {
+//          Serial.printf("Transfer @ %p\n", this);
+        };
+        bool busy() const {return ((m_state == State::pending) || (m_state == State::inProgress) || (m_state == State::error));}
+        bool done() const {return (m_state == State::eDone);}
     //  private:
         volatile State m_state;
         const uint8_t* m_pSource;
@@ -51,12 +53,76 @@ class DmaSpi0
         AbstractChipSelect* m_pSelect;
     };
 
+    void start()
+    {
+      switch(state_)
+      {
+        case eStopped:
+          state_ = eRunning;
+          claimSpi();
+          beginNextTransfer();
+          break;
+
+        case eRunning:
+          break;
+
+        case eStopping:
+          ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+          {
+            state_ = eRunning;
+          }
+          break;
+
+        default:
+          state_ = eError;
+          break;
+      }
+    }
+
+    void stop()
+    {
+      ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+      {
+        switch(state_)
+        {
+          case eStopped:
+            break;
+          case eRunning:
+            if (busy())
+            {
+              state_ = eStopping;
+            }
+            else
+            {
+              // this means that the DMA SPI simply has nothing to do
+              state_ = eStopped;
+              releaseSpi();
+            }
+
+            break;
+          case eStopping:
+            break;
+          default:
+            state_ = eError;
+            break;
+        }
+      }
+    }
+
+    bool stopped()
+    {
+      return (state_ == eStopped);
+    }
+
     static bool registerTransfer(Transfer& transfer)
     {
+//      Serial.printf("Registering transfer %p\n", &transfer);
       if ((transfer.busy())
        || (transfer.m_size == 0) // no zero length transfers allowed
        || (transfer.m_size >= 0x8000)) // max CITER/BITER count with ELINK = 0 is 0x7FFF, so reject
       {
+//        Serial.printf("register: Transfer is busy or invalid, dropped\n");
+        transfer.m_state = Transfer::State::error;
         return false;
       }
       transfer.m_state = Transfer::State::pending;
@@ -66,13 +132,23 @@ class DmaSpi0
         if (m_pCurrentTransfer == nullptr)
         {
           /** no pending transfer **/
+//          Serial.println("register: No pending transfer");
           m_pNextTransfer = &transfer;
           m_pLastTransfer = &transfer;
-          beginNextTransfer();
+          if (state_ == eRunning)
+          {
+//            Serial.println("register: running/idle: will start pending transfer");
+            beginNextTransfer();
+          }
+          else
+          {
+//            Serial.println("register: stopped, will not start pending transfer");
+          }
         }
         else
         {
           /** add to list of pending transfers **/
+//          Serial.println("register: queueing transfer");
           if (m_pNextTransfer == nullptr)
           {
             m_pNextTransfer = &transfer;
@@ -87,72 +163,33 @@ class DmaSpi0
       return true;
     }
 
-    static void begin()
+    static bool begin()
     {
-      spiBackup_.create();
-      // configure SPI0
-      SIM_SCGC6 |= SIM_SCGC6_SPI0;
+      // create DMA channels, might fail
+      if (!createDmaChannels())
+      {
+        return false;
+      }
+      state_ = eStopped;
+      // tx: known destination (SPI), no interrupt, finish silently
+      txChannel_()->destination((volatile uint8_t&)SPI0_PUSHR);
+      txChannel_()->disableOnCompletion();
+      txChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_TX);
 
-      // configure SPI pins: SCK, MOSI, CS0 as outputs, mux(2)
-      pinMode(13, OUTPUT); // SCK
-      PORTC_PCR5 = PORT_PCR_SRE | PORT_PCR_DSE | PORT_PCR_MUX(2);
-      pinMode(11, OUTPUT); // MOSI
-      PORTC_PCR6 = PORT_PCR_SRE | PORT_PCR_DSE | PORT_PCR_MUX(2);
-      pinMode(12, INPUT); // MISO
-      PORTC_PCR7 = PORT_PCR_MUX(2);
+      // rx: known source (SPI), interrupt on completion
+      rxChannel_()->source((volatile uint8_t&)SPI0_POPR);
+      rxChannel_()->disableOnCompletion();
+      rxChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_RX);
+      rxChannel_()->attachInterrupt(rxIsr_);
+      rxChannel_()->interruptAtCompletion();
 
-      // clear status flags
-      SPI0_SR = 0xFF0F0000;
-      // disable requests
-      SPI0_RSER = 0;
-      // master mode, clear buffers
-      SPI0_MCR = SPI_MCR_MSTR | SPI_MCR_DCONF(0) | SPI_MCR_CLR_TXF | SPI_MCR_CLR_RXF;
+      return true;
+    }
 
-      // configure default transfer attributes
-//      SPI0_CTAR0 = SPI_CTAR_FMSZ(7) | SPI_CTAR_PBR(0) | SPI_CTAR_BR(0);
-
-      // turn on DMAMUX and DMA
-      SIM_SCGC6 |= SIM_SCGC6_DMAMUX;
-      SIM_SCGC7 |= SIM_SCGC7_DMA;
-
-      // clear DMA error flags and channel configurations
-      DMA_ERR = 0x0F;
-      DMAMUX0_CHCFG1 = 0;
-      DMAMUX0_CHCFG0 = 0;
-
-      // clear Rx channel interrupt request, in case one is pending
-      DMA_CINT = DMA_CINT_CINT(DMASPI0_RXCHAN);
-
-      // enable requests
-      // Tx, select SPI Tx FIFO
-      DMAMUX0_CHCFG1 = DMAMUX_ENABLE | DMAMUX_SOURCE_SPI0_TX;
-      // Rx, select SPI Rx FIFO
-      DMAMUX0_CHCFG0 = DMAMUX_ENABLE | DMAMUX_SOURCE_SPI0_RX;
-
-      // enable dma interrupt for rx channel
-      NVIC_ENABLE_IRQ((IRQ_DMA_CH0 + DMASPI0_RXCHAN)); // double parantheses needed by macro
-      // enable SPI requests (->dma)
-      SPI0_RSER = SPI_RSER_TFFF_RE | SPI_RSER_TFFF_DIRS | SPI_RSER_RFDF_RE | SPI_RSER_RFDF_DIRS;
-
-      // configure DMA mux, TX
-      DMA_TCD1_ATTR = DMA_TCD_ATTR_SSIZE(DMA_TCD_ATTR_SIZE_8BIT) | DMA_TCD_ATTR_DSIZE(DMA_TCD_ATTR_SIZE_8BIT);
-      DMA_TCD1_NBYTES_MLNO = 1;
-      DMA_TCD1_SLAST = 0;
-      DMA_TCD1_DADDR = (void*)&SPI0_PUSHR;
-      DMA_TCD1_DOFF = 0;
-      DMA_TCD1_DLASTSGA = 0;
-      DMA_TCD1_CSR = DMA_TCD_CSR_DREQ;
-
-      // configure DMA mux, RX
-      DMA_TCD0_SADDR = (void*)&SPI0_POPR;
-      DMA_TCD0_SOFF = 0;
-      DMA_TCD0_ATTR = DMA_TCD_ATTR_SSIZE(DMA_TCD_ATTR_SIZE_8BIT) | DMA_TCD_ATTR_DSIZE(DMA_TCD_ATTR_SIZE_8BIT);
-      DMA_TCD0_NBYTES_MLNO = 1;
-      DMA_TCD0_SLAST = 0;
-      DMA_TCD0_DLASTSGA = 0;
-      DMA_TCD0_CSR = DMA_TCD_CSR_DREQ | DMA_TCD_CSR_INTMAJOR;
-
-      dmaSpiBackup_.create();
+    static void end()
+    {
+      destroyDmaChannels();
+      state_ = eError;
     }
 
     static bool busy()
@@ -160,139 +197,153 @@ class DmaSpi0
       return (m_pCurrentTransfer != nullptr);
     }
 
-    static void pause()
+    static uint8_t devNull()
     {
-      pause_ = true;
+      return m_devNull;
     }
 
-    static bool paused()
+  private:
+    enum EState
     {
-      return (pause_ && (!busy()));
-    }
+      eStopped,
+      eRunning,
+      eStopping,
+      eError
+    };
 
     static void releaseSpi()
     {
-      spiBackup_.restore();
+      SPI0_RSER = 0;
+      SPI0_SR = 0xFF0F0000;
+      SPI.endTransaction();
     }
 
-    static void resume()
+    static void claimSpi()
     {
-      dmsSpiBackup_.restore();
-      pause_ = false;
-      beginNextTransfer();
+      SPI.beginTransaction(SPISettings());
+      SPI0_SR = 0xFF0F0000;
+      SPI0_RSER = SPI_RSER_RFDF_RE | SPI_RSER_RFDF_DIRS | SPI_RSER_TFFF_RE | SPI_RSER_TFFF_DIRS;
     }
 
-    static void m_rxIsr()
+    static bool createDmaChannels()
     {
-      // transfer finished, start next one if available
-      DMA_CINT = DMA_CINT_CINT(DMASPI0_RXCHAN);
-      DMA_CERQ = DMA_CERQ_CERQ(DMASPI0_TXCHAN);
+      if (txChannel_() == nullptr)
+      {
+        return false;
+      }
+      if (rxChannel_() == nullptr)
+      {
+        delete txChannel_();
+        return false;
+      }
+      return true;
+    }
 
-      /** TBD: RELEASE SPI HERE IF APP REQUESTED IT**/
-      /** TBD: IF NOT, PROCEED **/
+    static void destroyDmaChannels()
+    {
+      if (rxChannel_() != nullptr)
+      {
+        delete rxChannel_();
+      }
+      if (txChannel_() != nullptr)
+      {
+        delete txChannel_();
+      }
+    }
 
+    static DMAChannel* rxChannel_()
+    {
+      static DMAChannel* pChannel = new DMAChannel();
+      return pChannel;
+    }
+
+    static DMAChannel* txChannel_()
+    {
+      static DMAChannel* pChannel = new DMAChannel();
+      return pChannel;
+    }
+
+    static void rxIsr_()
+    {
+      rxChannel_()->clearInterrupt();
+
+      // end current transfer: deselect and mark as done
       if (m_pCurrentTransfer->m_pSelect != nullptr)
       {
         m_pCurrentTransfer->m_pSelect->deselect();
-        SPI0_CTAR0 = m_ctarBackup;
       }
-      m_pCurrentTransfer->m_state = Transfer::State::done;
+      m_pCurrentTransfer->m_state = Transfer::State::eDone;
+//      Serial.printf("rx ISR: finished transfer @ %p\n", m_pCurrentTransfer);
       m_pCurrentTransfer = nullptr;
       beginNextTransfer();
     }
 
-    static void write(const uint8_t& val)
-    {
-      Transfer transfer(nullptr, 1, nullptr, val, nullptr);
-      registerTransfer(transfer);
-      while(transfer.busy())
-      ;
-    }
-
-    static uint8_t read(const uint32_t& flagsVal)
-    {
-      volatile uint8_t result;
-      Transfer transfer(nullptr, 1, &result, flagsVal);
-      registerTransfer(transfer);
-      while(transfer.busy())
-      ;
-      return result;
-    }
-
-  private:
     static void beginNextTransfer()
     {
-      if ((m_pNextTransfer == nullptr) || (pause_ == true))
+      if (state_ == eStopping)
       {
-        /** TBD: UNLOCK SPI **/
+//        Serial.println("beginNextTransfer: stopping"); Serial.flush();
+        releaseSpi();
+        state_ = eStopped;
         return;
       }
-      /** TBD: Lock SPI **/
+
+      if (m_pNextTransfer == nullptr)
+      {
+//        Serial.println("beginNextTransfer: no pending transfer"); Serial.flush();
+        return;
+      }
 
       m_pCurrentTransfer = m_pNextTransfer;
+//      Serial.printf("beginNextTransfer: starting transfer @ %p\n", m_pCurrentTransfer); Serial.flush();
       m_pCurrentTransfer->m_state = Transfer::State::inProgress;
       m_pNextTransfer = m_pNextTransfer->m_pNext;
       if (m_pNextTransfer == nullptr)
       {
+//        Serial.println("beginNextTransfer: this was the last in queue"); Serial.flush();
         m_pLastTransfer = nullptr;
       }
 
       // Select Chip
       if (m_pCurrentTransfer->m_pSelect != nullptr)
       {
-        m_ctarBackup = SPI0_CTAR0;
         m_pCurrentTransfer->m_pSelect->select();
       }
-
-      // clear SPI flags
-      SPI0_SR = 0xFF0F0000;
-      SPI0_MCR |= SPI_MCR_CLR_RXF | SPI_MCR_CLR_TXF;
-      SPI0_TCR = 0;
 
       // configure Rx DMA
       if (m_pCurrentTransfer->m_pDest != nullptr)
       {
-        // real data sink, offset after writing: 1
-        DMA_TCD0_DADDR = (void*)(m_pCurrentTransfer->m_pDest);
-        DMA_TCD0_DOFF = 1;
+        // real data sink
+        rxChannel_()->destinationBuffer(m_pCurrentTransfer->m_pDest,
+                                        m_pCurrentTransfer->m_size);
       }
       else
       {
-        // use devNull, offset after writing: 0
-        DMA_TCD0_DADDR = (void*)&m_devNull;
-        DMA_TCD0_DOFF = 0;
+        // dummy data sink
+        rxChannel_()->destination(m_devNull);
       }
-      // set transfer size
-      DMA_TCD0_CITER_ELINKNO = DMA_TCD0_BITER_ELINKNO = m_pCurrentTransfer->m_size;
-      // enable Rx request
-      DMA_SERQ = DMASPI0_RXCHAN;
+      rxChannel_()->enable();
 
       // configure Tx DMA
       if (m_pCurrentTransfer->m_pSource != nullptr)
       {
         // real data source
-        DMA_TCD1_SADDR = (void*)(m_pCurrentTransfer->m_pSource);
-        DMA_TCD1_SOFF = 1;
+        txChannel_()->sourceBuffer(m_pCurrentTransfer->m_pSource,
+                                   m_pCurrentTransfer->m_size);
       }
       else
       {
-        // dummy source
-        DMA_TCD1_SADDR = (void*)&(m_pCurrentTransfer->m_fill);
-        DMA_TCD1_SOFF = 0;
+        // dummy data source
+        txChannel_()->source(m_pCurrentTransfer->m_fill);
       }
-      // set transfer size
-      DMA_TCD1_CITER_ELINKNO = DMA_TCD1_BITER_ELINKNO = m_pCurrentTransfer->m_size;
-      DMA_SERQ = DMASPI0_TXCHAN;
+      txChannel_()->enable();
     }
 
-    static volatile uint32_t m_ctarBackup;
+    static volatile EState state_;
     static Transfer* volatile m_pCurrentTransfer;
     static Transfer* volatile m_pNextTransfer;
     static Transfer* volatile m_pLastTransfer;
     static volatile uint8_t m_devNull;
-    static bool pause_;
-    static SpiBackup spiBackup_;
-    static SpiBackup dmaSpiBackup_;
 };
 
 extern DmaSpi0 DMASPI0;
