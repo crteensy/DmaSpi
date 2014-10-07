@@ -6,7 +6,8 @@ Branch for teensyduino 1.20 RC2
 
 Discussion thread: http://forum.pjrc.com/threads/26479-DmaSpi-for-teensyduino-1-20-RC2
 
-This branch is currently in development and will change a lot in the coming weeks (starting somewhen after August 17th, 2014, but not earlier). It will make use of the following teensyduino 1.20 RC2 features:
+This branch is currently in development will change over time.
+It will make use of the following teensyduino 1.20 RC2 features:
 - SPI transactions,
 - dynamic DMA channel allocation,
 - interrupt vector table in RAM
@@ -17,4 +18,4 @@ This is a library for teensyduino that facilitates the use of SPI0 with DMA. In 
 
 The library comes with a set of utility classes for selecting slaves, see ChipSelect.h
 
-Examples will follow soon.
+An example that shows a lot of the functionality is in the example folder.
