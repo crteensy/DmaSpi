@@ -53,116 +53,6 @@ class DmaSpi0
         AbstractChipSelect* m_pSelect;
     };
 
-    void start()
-    {
-      switch(state_)
-      {
-        case eStopped:
-          state_ = eRunning;
-          claimSpi();
-          beginNextTransfer();
-          break;
-
-        case eRunning:
-          break;
-
-        case eStopping:
-          ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-          {
-            state_ = eRunning;
-          }
-          break;
-
-        default:
-          state_ = eError;
-          break;
-      }
-    }
-
-    void stop()
-    {
-      ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-      {
-        switch(state_)
-        {
-          case eStopped:
-            break;
-          case eRunning:
-            if (busy())
-            {
-              state_ = eStopping;
-            }
-            else
-            {
-              // this means that the DMA SPI simply has nothing to do
-              state_ = eStopped;
-              releaseSpi();
-            }
-
-            break;
-          case eStopping:
-            break;
-          default:
-            state_ = eError;
-            break;
-        }
-      }
-    }
-
-    bool stopped()
-    {
-      return (state_ == eStopped);
-    }
-
-    static bool registerTransfer(Transfer& transfer)
-    {
-//      Serial.printf("Registering transfer %p\n", &transfer);
-      if ((transfer.busy())
-       || (transfer.m_size == 0) // no zero length transfers allowed
-       || (transfer.m_size >= 0x8000)) // max CITER/BITER count with ELINK = 0 is 0x7FFF, so reject
-      {
-//        Serial.printf("register: Transfer is busy or invalid, dropped\n");
-        transfer.m_state = Transfer::State::error;
-        return false;
-      }
-      transfer.m_state = Transfer::State::pending;
-      transfer.m_pNext = nullptr;
-      ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
-      {
-        if (m_pCurrentTransfer == nullptr)
-        {
-          /** no pending transfer **/
-//          Serial.println("register: No pending transfer");
-          m_pNextTransfer = &transfer;
-          m_pLastTransfer = &transfer;
-          if (state_ == eRunning)
-          {
-//            Serial.println("register: running/idle: will start pending transfer");
-            beginNextTransfer();
-          }
-          else
-          {
-//            Serial.println("register: stopped, will not start pending transfer");
-          }
-        }
-        else
-        {
-          /** add to list of pending transfers **/
-//          Serial.println("register: queueing transfer");
-          if (m_pNextTransfer == nullptr)
-          {
-            m_pNextTransfer = &transfer;
-          }
-          else
-          {
-            m_pLastTransfer->m_pNext = &transfer;
-          }
-          m_pLastTransfer = &transfer;
-        }
-      }
-      return true;
-    }
-
     static bool begin()
     {
       // create DMA channels, might fail
@@ -186,15 +76,96 @@ class DmaSpi0
       return true;
     }
 
-    static void end()
+    void start()
     {
-      destroyDmaChannels();
-      state_ = eError;
+      switch(state_)
+      {
+        case eStopped:
+          state_ = eRunning;
+//          claimSpi();
+          beginPendingTransfer();
+          break;
+
+        case eRunning:
+          break;
+
+        case eStopping:
+          state_ = eRunning;
+          break;
+
+        default:
+          state_ = eError;
+          break;
+      }
+    }
+
+    static bool running() {return state_ == eRunning;}
+
+    static bool registerTransfer(Transfer& transfer)
+    {
+//      Serial.printf("Registering transfer %p\n", &transfer);
+      if ((transfer.busy())
+       || (transfer.m_size == 0) // no zero length transfers allowed
+       || (transfer.m_size >= 0x8000)) // max CITER/BITER count with ELINK = 0 is 0x7FFF, so reject
+      {
+//        Serial.printf("register: Transfer is busy or invalid, dropped\n");
+        transfer.m_state = Transfer::State::error;
+        return false;
+      }
+      addTransferToQueue(transfer);
+      if ((state_ == eRunning) && (!busy()))
+      {
+        ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+        {
+          beginPendingTransfer();
+        }
+      }
+      return true;
     }
 
     static bool busy()
     {
       return (m_pCurrentTransfer != nullptr);
+    }
+
+    void stop()
+    {
+      ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+      {
+        switch(state_)
+        {
+          case eStopped:
+            break;
+          case eRunning:
+            if (busy())
+            {
+              state_ = eStopping;
+            }
+            else
+            {
+              // this means that the DMA SPI simply has nothing to do
+              state_ = eStopped;
+//              releaseSpi();
+            }
+
+            break;
+          case eStopping:
+            break;
+          default:
+            state_ = eError;
+            break;
+        }
+      }
+    }
+
+    bool stopping() const { return state_ == eStopping; }
+
+    bool stopped() const { return (state_ == eStopped); }
+
+    static void end()
+    {
+      destroyDmaChannels();
+      state_ = eError;
     }
 
     static uint8_t devNull()
@@ -211,19 +182,60 @@ class DmaSpi0
       eError
     };
 
-    static void releaseSpi()
+    static void addTransferToQueue(Transfer& transfer)
     {
-      SPI0_RSER = 0;
-      SPI0_SR = 0xFF0F0000;
-      SPI.endTransaction();
+      transfer.m_state = Transfer::State::pending;
+      transfer.m_pNext = nullptr;
+      ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+      {
+//          Serial.println("register: queueing transfer");
+        if (m_pNextTransfer == nullptr)
+        {
+          m_pNextTransfer = &transfer;
+        }
+        else
+        {
+          m_pLastTransfer->m_pNext = &transfer;
+        }
+        m_pLastTransfer = &transfer;
+      }
     }
 
-    static void claimSpi()
+    static void finishCurrentTransfer()
     {
-      SPI.beginTransaction(SPISettings());
+      if (m_pCurrentTransfer->m_pSelect != nullptr)
+      {
+        m_pCurrentTransfer->m_pSelect->deselect();
+      }
+      m_pCurrentTransfer->m_state = Transfer::State::eDone;
+//      Serial.printf("rx ISR: finished transfer @ %p\n", m_pCurrentTransfer);
+      m_pCurrentTransfer = nullptr;
+      disableSpiDmaRequests();
+    }
+
+    static void enableSpiDmaRequests()
+    {
       SPI0_SR = 0xFF0F0000;
       SPI0_RSER = SPI_RSER_RFDF_RE | SPI_RSER_RFDF_DIRS | SPI_RSER_TFFF_RE | SPI_RSER_TFFF_DIRS;
     }
+
+    static void disableSpiDmaRequests()
+    {
+      SPI0_RSER = 0;
+      SPI0_SR = 0xFF0F0000;
+    }
+
+//    static void releaseSpi()
+//    {
+//      disableSpiDmaRequests();
+//      SPI.endTransaction();
+//    }
+//
+//    static void claimSpi()
+//    {
+//      SPI.beginTransaction(SPISettings());
+//      enableSpiDmaRequests();
+//    }
 
     static bool createDmaChannels()
     {
@@ -266,28 +278,30 @@ class DmaSpi0
     static void rxIsr_()
     {
       rxChannel_()->clearInterrupt();
-
       // end current transfer: deselect and mark as done
-      if (m_pCurrentTransfer->m_pSelect != nullptr)
+      finishCurrentTransfer();
+      switch(state_)
       {
-        m_pCurrentTransfer->m_pSelect->deselect();
+        case eStopped: // this should not happen!
+          state_ = eError;
+          break;
+        case eRunning:
+//          Serial.println("rx ISR: next");
+          beginPendingTransfer();
+          break;
+        case eStopping:
+          state_ = eStopped;
+          break;
+        case eError:
+          break;
+        default:
+          state_ = eError;
+          break;
       }
-      m_pCurrentTransfer->m_state = Transfer::State::eDone;
-//      Serial.printf("rx ISR: finished transfer @ %p\n", m_pCurrentTransfer);
-      m_pCurrentTransfer = nullptr;
-      beginNextTransfer();
     }
 
-    static void beginNextTransfer()
+    static void beginPendingTransfer()
     {
-      if (state_ == eStopping)
-      {
-//        Serial.println("beginNextTransfer: stopping"); Serial.flush();
-        releaseSpi();
-        state_ = eStopped;
-        return;
-      }
-
       if (m_pNextTransfer == nullptr)
       {
 //        Serial.println("beginNextTransfer: no pending transfer"); Serial.flush();
@@ -304,6 +318,7 @@ class DmaSpi0
         m_pLastTransfer = nullptr;
       }
 
+      enableSpiDmaRequests();
       // Select Chip
       if (m_pCurrentTransfer->m_pSelect != nullptr)
       {

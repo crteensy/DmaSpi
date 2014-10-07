@@ -20,6 +20,12 @@ class DummyChipSelect : public AbstractChipSelect
   void deselect() override {}
 };
 
+class DebugChipSelect : public AbstractChipSelect
+{
+  void select() override {Serial.println("Dummy CS: select()");}
+  void deselect() override {Serial.println("Dummy CS: deselect()");}
+};
+
 /** An active low chip select class. This also configures the pin once.
 **/
 class ActiveLowChipSelect : public AbstractChipSelect
@@ -34,22 +40,15 @@ class ActiveLowChipSelect : public AbstractChipSelect
     }
     void select() override
     {
-//      Serial.printf("Selecting on pin %02u\n", pin_);
-      applySpiSettings(settings_);
+      SPI.beginTransaction(settings_);
       digitalWriteFast(pin_, 0);
     }
     void deselect() override
     {
-//      Serial.printf("Deselecting on pin %02u\n", pin_);
-      applySpiSettings(SPISettings());
       digitalWriteFast(pin_, 1);
+      SPI.endTransaction();
     }
   private:
-    void applySpiSettings(const SPISettings& settings)
-    {
-      SPI.endTransaction();
-      SPI.beginTransaction(settings);
-    }
     const unsigned int pin_;
     const SPISettings& settings_;
 
