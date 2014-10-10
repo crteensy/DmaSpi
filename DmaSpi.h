@@ -8,7 +8,7 @@
   #error This library is for teensyduino 1.20 on Teensy 3.0 and 3.1 only.
 #endif
 
-#include "SPI.h"
+#include <SPI.h>
 #include "DMAChannel.h"
 #include "ChipSelect.h"
 
