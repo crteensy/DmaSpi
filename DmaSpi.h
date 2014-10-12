@@ -12,6 +12,8 @@
 #include "DMAChannel.h"
 #include "ChipSelect.h"
 
+/** \brief The main DMA SPI driver class
+**/
 class DmaSpi0
 {
   public:
@@ -123,7 +125,7 @@ class DmaSpi0
       return true;
     }
 
-    /** \brief Allow the DMA SPI to start handling transfers. This must be called after begin().
+    /** \brief Allow the DMA SPI to start handling Transfers. This must be called after begin().
      * \see running()
      * \see busy()
      * \see stop()
