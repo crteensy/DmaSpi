@@ -22,8 +22,8 @@ class DummyChipSelect : public AbstractChipSelect
 
 class DebugChipSelect : public AbstractChipSelect
 {
-  void select() override {Serial.println("Dummy CS: select()");}
-  void deselect() override {Serial.println("Dummy CS: deselect()");}
+  void select() override {Serial.println("Debug CS: select()");}
+  void deselect() override {Serial.println("Debug CS: deselect()");}
 };
 
 /** An active low chip select class. This also configures the pin once.
