@@ -27,13 +27,13 @@ class DmaSpi0
           error
         };
         Transfer(const uint8_t* pSource = nullptr,
-                    const uint16_t& size = 0,
+                    const uint16_t& transferCount = 0,
                     volatile uint8_t* pDest = nullptr,
                     const uint8_t& fill = 0,
                     AbstractChipSelect* cb = nullptr
         ) : m_state(State::idle),
           m_pSource(pSource),
-          m_size(size),
+          m_transferCount(transferCount),
           m_pDest(pDest),
           m_fill(fill),
           m_pNext(nullptr),
@@ -46,7 +46,7 @@ class DmaSpi0
     //  private:
         volatile State m_state;
         const uint8_t* m_pSource;
-        uint16_t m_size;
+        uint16_t m_transferCount;
         volatile uint8_t* m_pDest;
         uint8_t m_fill;
         Transfer* m_pNext;
@@ -123,8 +123,8 @@ class DmaSpi0
     {
 //      Serial.printf("DmaSpi::registerTransfer(%p)\n", &transfer);
       if ((transfer.busy())
-       || (transfer.m_size == 0) // no zero length transfers allowed
-       || (transfer.m_size >= 0x8000)) // max CITER/BITER count with ELINK = 0 is 0x7FFF, so reject
+       || (transfer.m_transferCount == 0) // no zero length transfers allowed
+       || (transfer.m_transferCount >= 0x8000)) // max CITER/BITER count with ELINK = 0 is 0x7FFF, so reject
       {
 //        Serial.printf("  Transfer is busy or invalid, dropped\n");
         transfer.m_state = Transfer::State::error;
@@ -344,14 +344,14 @@ class DmaSpi0
         // real data sink
 //        Serial.println("  real sink");
         rxChannel_()->destinationBuffer(m_pCurrentTransfer->m_pDest,
-                                        m_pCurrentTransfer->m_size);
+                                        m_pCurrentTransfer->m_transferCount);
       }
       else
       {
         // dummy data sink
 //        Serial.println("  dummy sink");
         rxChannel_()->destination(m_devNull);
-        rxChannel_()->transferCount(m_pCurrentTransfer->m_size);
+        rxChannel_()->transferCount(m_pCurrentTransfer->m_transferCount);
       }
       rxChannel_()->enable();
 
@@ -361,14 +361,14 @@ class DmaSpi0
         // real data source
 //        Serial.println("  real source");
         txChannel_()->sourceBuffer(m_pCurrentTransfer->m_pSource,
-                                   m_pCurrentTransfer->m_size);
+                                   m_pCurrentTransfer->m_transferCount);
       }
       else
       {
         // dummy data source
 //        Serial.println("  dummy source");
         txChannel_()->source(m_pCurrentTransfer->m_fill);
-        txChannel_()->transferCount(m_pCurrentTransfer->m_size);
+        txChannel_()->transferCount(m_pCurrentTransfer->m_transferCount);
       }
       txChannel_()->enable();
     }
