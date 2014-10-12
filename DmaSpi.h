@@ -351,6 +351,7 @@ class DmaSpi0
         // dummy data sink
 //        Serial.println("  dummy sink");
         rxChannel_()->destination(m_devNull);
+        rxChannel_()->transferCount(m_pCurrentTransfer->m_size);
       }
       rxChannel_()->enable();
 
@@ -367,6 +368,7 @@ class DmaSpi0
         // dummy data source
 //        Serial.println("  dummy source");
         txChannel_()->source(m_pCurrentTransfer->m_fill);
+        txChannel_()->transferCount(m_pCurrentTransfer->m_size);
       }
       txChannel_()->enable();
     }

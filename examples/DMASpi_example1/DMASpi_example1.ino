@@ -1,9 +1,11 @@
 #include <WProgram.h>
 
-#include <SPI.h>
 #include <DmaSpi.h>
 
-
+/** Important
+  The sketch waits for user input through Serial (USB) before it starts the setup.
+  After any key was pressed, it should begin to work. It will ask for a second keypress later.
+**/
 
 /** Hardware setup:
  plain Teensy 3.1 with DOUT connected to DIN
@@ -94,13 +96,14 @@ void setup()
   waitForKeyPress();
 
   DMASPI0.begin();
-
   DMASPI0.start();
 
 
+  DmaSpi0::Transfer trx(nullptr, 0, nullptr);
+
   Serial.println("Testing src -> dest, single transfer");
   Serial.println("--------------------------------------------------");
-  DmaSpi0::Transfer trx(src, DMASIZE, dest);
+  trx = DmaSpi0::Transfer(src, DMASIZE, dest);
   clrDest((uint8_t*)dest);
   DMASPI0.registerTransfer(trx);
   while(trx.busy())
@@ -197,6 +200,7 @@ void setup()
   Serial.println("Testing src -> dest, with chip select object");
   Serial.println("--------------------------------------------------");
   ActiveLowChipSelect cs(0, SPISettings());
+//  DebugChipSelect cs;
   trx = DmaSpi0::Transfer(src, DMASIZE, dest, 0, &cs);
   clrDest((uint8_t*)dest);
   DMASPI0.registerTransfer(trx);
