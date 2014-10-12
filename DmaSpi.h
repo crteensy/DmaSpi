@@ -15,35 +15,59 @@
 class DmaSpi0
 {
   public:
+    /** \brief describes an SPI transfer
+     *
+     * Transfers are kept in a queue (intrusive linked list) until they are processed by the DmaSpi driver.
+     *
+    **/
     class Transfer
     {
       public:
+        /** \brief The transfer's current state.
+        *
+        **/
         enum State
         {
-          idle,
-          eDone,
-          pending,
-          inProgress,
-          error
+          idle, /**< The transfer is idle, the DmaSpi has not seen it yet. **/
+          eDone, /**< The transfer is done. **/
+          pending, /**< Queued, but not handled yet. **/
+          inProgress, /**< The DmaSpi driver is currently busy executing this transfer. **/
+          error /**< An error occured. **/
         };
+
+        /** \brief Creates a transfer object.
+        * \param pSource pointer to the data source. If this is nullptr, the fill value is used instead.
+        * \param transferCount the number of SPI transfers to perform.
+        * \param pDest pointer to the data sink. If this is nullptr, data received from the slave will be discarded.
+        * \param fill if pSource is nullptr, this value is sent to the slave instead.
+        * \param cs pointer to a chip select object.
+        *   If not nullptr, cs->select() is called when the transfer is started and cs->deselect() is called when the transfer is finished.
+        **/
         Transfer(const uint8_t* pSource = nullptr,
                     const uint16_t& transferCount = 0,
                     volatile uint8_t* pDest = nullptr,
                     const uint8_t& fill = 0,
-                    AbstractChipSelect* cb = nullptr
+                    AbstractChipSelect* cs = nullptr
         ) : m_state(State::idle),
           m_pSource(pSource),
           m_transferCount(transferCount),
           m_pDest(pDest),
           m_fill(fill),
           m_pNext(nullptr),
-          m_pSelect(cb)
+          m_pSelect(cs)
         {
 //          Serial.printf("Transfer @ %p\n", this);
         };
+
+        /** \brief Check if transfer is busy, i.e. may not be modified.
+        **/
         bool busy() const {return ((m_state == State::pending) || (m_state == State::inProgress) || (m_state == State::error));}
+
+        /** \brief Check if the transfer is done.
+        **/
         bool done() const {return (m_state == State::eDone);}
-    //  private:
+
+//      private:
         volatile State m_state;
         const uint8_t* m_pSource;
         uint16_t m_transferCount;
@@ -53,6 +77,15 @@ class DmaSpi0
         AbstractChipSelect* m_pSelect;
     };
 
+    /** \brief arduino-style initialization.
+     *
+     * During initialization, two DMA channels are allocated. If that fails, this function returns false.
+     * If the channels could be allocated, those DMA channel fields that don't change during DMA SPI operation
+     * are initialized to the values they will have at runtime.
+     *
+     * \return true if initialization was successful; false otherwise.
+     * \see end()
+    **/
     static bool begin()
     {
 //      Serial.println("DmaSpi::begin() : ");
@@ -90,7 +123,14 @@ class DmaSpi0
       return true;
     }
 
-    void start()
+    /** \brief Allow the DMA SPI to start handling transfers. This must be called after begin().
+     * \see running()
+     * \see busy()
+     * \see stop()
+     * \see stopping()
+     * \see stopped()
+    **/
+    static void start()
     {
 //      Serial.print("DmaSpi::start() : state_ = ");
       switch(state_)
@@ -117,8 +157,20 @@ class DmaSpi0
       }
     }
 
+    /** \brief check if the DMA SPI is in running state.
+     * \return true if the DMA SPI is in running state, false otherwise.
+     * \see start()
+     * \see busy()
+     * \see stop()
+     * \see stopping()
+     * \see stopped()
+    **/
     static bool running() {return state_ == eRunning;}
 
+    /** \brief register a transfer to be handled by the DMA SPI.
+     * \return false if the transfer had an invalid transfer count (zero or greater than 32767), true otherwise.
+     * \post the transfer state is Transfer::State::pending, or Transfer::State::error if the transfer count was invalid.
+    **/
     static bool registerTransfer(Transfer& transfer)
     {
 //      Serial.printf("DmaSpi::registerTransfer(%p)\n", &transfer);
@@ -142,12 +194,29 @@ class DmaSpi0
       return true;
     }
 
+    /** \brief Check if the DMA SPI is busy, which means that it is currently handling a transfer.
+     \return true if a transfer is being handled.
+     * \see start()
+     * \see running()
+     * \see stop()
+     * \see stopping()
+     * \see stopped()
+    **/
     static bool busy()
     {
       return (m_pCurrentTransfer != nullptr);
     }
 
-    void stop()
+    /** \brief Request the DMA SPI to stop handling transfers.
+     *
+     * The stopping driver may finish a current transfer, but it will then not start a new, pending one.
+     * \see start()
+     * \see running()
+     * \see busy()
+     * \see stopping()
+     * \see stopped()
+    **/
+    static void stop()
     {
       ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
       {
@@ -175,16 +244,39 @@ class DmaSpi0
       }
     }
 
-    bool stopping() const { return (state_ == eStopping); }
+    /** \brief See if the DMA SPI is currently switching from running to stopped state
+     * \return true if the DMA SPI is switching from running to stopped state
+     * \see start()
+     * \see running()
+     * \see busy()
+     * \see stop()
+     * \see stopped()
+    **/
+    static bool stopping() { return (state_ == eStopping); }
 
-    bool stopped() const { return (state_ == eStopped); }
+    /** \brief See if the DMA SPI is stopped
+    * \return true if the DMA SPI is in stopped state, i.e. not handling pending transfers
+     * \see start()
+     * \see running()
+     * \see busy()
+     * \see stop()
+     * \see stopping()
+    **/
+    static bool stopped() { return (state_ == eStopped); }
 
+    /** \brief Shut down the DMA SPI
+     *
+     * Deallocates DMA channels and sets the internal state to error (this might not be an intelligent name for that)
+     * \see begin()
+    **/
     static void end()
     {
       destroyDmaChannels();
       state_ = eError;
     }
 
+    /** \brief get the last value that was read from a slave, but discarded because the Transfer didn't specify a sink
+    **/
     static uint8_t devNull()
     {
       return m_devNull;
