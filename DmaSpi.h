@@ -23,25 +23,25 @@ class DmaSpi0
     class Transfer
     {
       public:
-        /** \brief The transfer's current state.
+        /** \brief The Transfer's current state.
         *
         **/
         enum State
         {
-          idle, /**< The transfer is idle, the DmaSpi has not seen it yet. **/
-          eDone, /**< The transfer is done. **/
+          idle, /**< The Transfer is idle, the DmaSpi has not seen it yet. **/
+          eDone, /**< The Transfer is done. **/
           pending, /**< Queued, but not handled yet. **/
-          inProgress, /**< The DmaSpi driver is currently busy executing this transfer. **/
+          inProgress, /**< The DmaSpi driver is currently busy executing this Transfer. **/
           error /**< An error occured. **/
         };
 
-        /** \brief Creates a transfer object.
+        /** \brief Creates a Transfer object.
         * \param pSource pointer to the data source. If this is nullptr, the fill value is used instead.
         * \param transferCount the number of SPI transfers to perform.
         * \param pDest pointer to the data sink. If this is nullptr, data received from the slave will be discarded.
         * \param fill if pSource is nullptr, this value is sent to the slave instead.
         * \param cs pointer to a chip select object.
-        *   If not nullptr, cs->select() is called when the transfer is started and cs->deselect() is called when the transfer is finished.
+        *   If not nullptr, cs->select() is called when the Transfer is started and cs->deselect() is called when the Transfer is finished.
         **/
         Transfer(const uint8_t* pSource = nullptr,
                     const uint16_t& transferCount = 0,
@@ -59,11 +59,11 @@ class DmaSpi0
 //          Serial.printf("Transfer @ %p\n", this);
         };
 
-        /** \brief Check if transfer is busy, i.e. may not be modified.
+        /** \brief Check if the Transfer is busy, i.e. may not be modified.
         **/
         bool busy() const {return ((m_state == State::pending) || (m_state == State::inProgress) || (m_state == State::error));}
 
-        /** \brief Check if the transfer is done.
+        /** \brief Check if the Transfer is done.
         **/
         bool done() const {return (m_state == State::eDone);}
 
@@ -167,9 +167,9 @@ class DmaSpi0
     **/
     static bool running() {return state_ == eRunning;}
 
-    /** \brief register a transfer to be handled by the DMA SPI.
-     * \return false if the transfer had an invalid transfer count (zero or greater than 32767), true otherwise.
-     * \post the transfer state is Transfer::State::pending, or Transfer::State::error if the transfer count was invalid.
+    /** \brief register a Transfer to be handled by the DMA SPI.
+     * \return false if the Transfer had an invalid transfer count (zero or greater than 32767), true otherwise.
+     * \post the Transfer state is Transfer::State::pending, or Transfer::State::error if the transfer count was invalid.
     **/
     static bool registerTransfer(Transfer& transfer)
     {
@@ -194,8 +194,8 @@ class DmaSpi0
       return true;
     }
 
-    /** \brief Check if the DMA SPI is busy, which means that it is currently handling a transfer.
-     \return true if a transfer is being handled.
+    /** \brief Check if the DMA SPI is busy, which means that it is currently handling a Transfer.
+     \return true if a Transfer is being handled.
      * \see start()
      * \see running()
      * \see stop()
@@ -207,9 +207,9 @@ class DmaSpi0
       return (m_pCurrentTransfer != nullptr);
     }
 
-    /** \brief Request the DMA SPI to stop handling transfers.
+    /** \brief Request the DMA SPI to stop handling Transfers.
      *
-     * The stopping driver may finish a current transfer, but it will then not start a new, pending one.
+     * The stopping driver may finish a current Transfer, but it will then not start a new, pending one.
      * \see start()
      * \see running()
      * \see busy()
@@ -255,7 +255,7 @@ class DmaSpi0
     static bool stopping() { return (state_ == eStopping); }
 
     /** \brief See if the DMA SPI is stopped
-    * \return true if the DMA SPI is in stopped state, i.e. not handling pending transfers
+    * \return true if the DMA SPI is in stopped state, i.e. not handling pending Transfers
      * \see start()
      * \see running()
      * \see busy()
