@@ -1,7 +1,7 @@
 DmaSpi
 ======
 
-DMA SPI for the Teensy 3.0/3.1
+DMA SPI for the Teensy 3.0/3.1; initial release
 
 Master branch
 --
@@ -14,7 +14,7 @@ The DmaSpi library makes use of the following teensyduino 1.20 features:
 - dynamic DMA channel allocation (**two channels** are required for operation),
 - interrupt vector table in RAM
 
-Features:
+Features
 --
 - A data source is optional.
   If only dummy data has to be sent to a slave, that's possible;
@@ -25,4 +25,13 @@ Features:
 - The DmaSpi can be started and stopped if necessary.
   It can be used along with other drivers that use the SPI in non-DMA mode.
 
-An example that shows a lot of the functionality is in the example folder.
+An example that shows a lot of the functionality is in the examples folder.
+
+Installation
+--
+
+Other branches
+--
+- teensyduino_1.18 is the pre-1.20 branch. As DMA channel handling was introduced to teensyduino after 1.18,
+  this branch contains the "raw" DMA handling code
+  and therefore might be interesting for those who don't want to/cannot use teensyduino.
