@@ -3,21 +3,26 @@ DmaSpi
 
 DMA SPI for the Teensy 3.0/3.1
 
-This is a library for teensyduino that facilitates the use of SPI0 with DMA. In its current state, it's dead simple and uses the following hardware resources:
-- SPI0
-- SPI0_CTAR0 for transfer attributes
-- DMA channels 0 and 1 for Rx and Tx, respectively
-- DMA channel 0 ISR
+Master branch
+--
+tested with teensyduino 1.20
 
-The library comes with a set of utility classes for selecting slaves. This is needed to overcome a bug in the chip's silicon, but also adds flexibility.
+Discussion thread: http://forum.pjrc.com/threads/26479-DmaSpi-for-teensyduino-1-20-RC2
 
-Installation instructions for the arduino IDE
----------------------------------------------
-If you have downloaded this library from github (https://github.com/crteensy/DmaSpi), you will need to install the library manually, because the automatically generated zip filename breaks arduino compatibility.
+The DmaSpi library makes use of the following teensyduino 1.20 features:
+- SPI transactions,
+- dynamic DMA channel allocation (**two channels** are required for operation),
+- interrupt vector table in RAM
 
-Here's how:
-- download zip file, the filename should be DmaSpi-master.zip
-- unzip where you like, and rename the resulting folder (DmaSpi-master) to DmaSpi
-- move that folder to your folder for contributed arduino libraries; see http://arduino.cc/en/Guide/Libraries -> Manual Installation for instructions
-- restart your arduino IDE if it was running
+Features:
+--
+- A data source is optional.
+  If only dummy data has to be sent to a slave, that's possible;
+- A sink for data received from a slave is optional.
+  Slave data can be discarded;
+- The maximum transfer length is 32767;
+- Transfers are queued and can have an optional chip select object associated with them (see ChipSelect.h);
+- The DmaSpi can be started and stopped if necessary.
+  It can be used along with other drivers that use the SPI in non-DMA mode.
 
+An example that shows a lot of the functionality is in the example folder.
