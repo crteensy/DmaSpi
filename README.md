@@ -3,16 +3,22 @@ DmaSpi
 
 DMA SPI for the Teensy 3.0/3.1; initial release
 
-Master branch
+teensyduino 1.21 test #2 branch
 --
-tested with teensyduino 1.20
+teensyduino 1.21 announcement thread: https://forum.pjrc.com/threads/27403-Teensyduino-1-21-Test-2-Available  
+Old 1.20 Discussion thread: http://forum.pjrc.com/threads/26479-DmaSpi-for-teensyduino-1-20-RC2  
+New Discussion thread yet to be opened
 
-Discussion thread: http://forum.pjrc.com/threads/26479-DmaSpi-for-teensyduino-1-20-RC2
-
-The DmaSpi library makes use of the following teensyduino 1.20 features:
+The DmaSpi library makes use of the following teensyduino features:
 - SPI transactions,
-- dynamic DMA channel allocation (**two channels** are required for operation),
+- dynamic DMA channel allocation
 - interrupt vector table in RAM
+
+Requirements
+--
+- The DMA SPI needs two DMA channels per SPI peripheral for operation.
+- the new teensy-LC has two SPIs, thus four DMA channels are required if both SPIs are used in DMA mode. In that case, no DMA channels are left for other peripherals
+- buffers (data sources and sinks) must remain valid until the library has finished reading from/writing to them.
 
 Features
 --
