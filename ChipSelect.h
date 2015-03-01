@@ -76,7 +76,7 @@ class ActiveLowChipSelect : public AbstractChipSelect
     }
   private:
     const unsigned int pin_;
-    const SPISettings& settings_;
+    const SPISettings settings_;
 
 };
 

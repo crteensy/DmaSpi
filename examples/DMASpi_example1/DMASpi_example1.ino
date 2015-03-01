@@ -9,7 +9,7 @@
 **/
 
 /** Hardware setup:
- plain Teensy 3.1 with DOUT connected to DIN
+ plain Teensy 3.1 with DOUT (11) connected to DIN (12)
  nothing else
 **/
 
@@ -100,11 +100,11 @@ void setup()
   DMASPI0.start();
 
 
-  DmaSpi0::Transfer trx(nullptr, 0, nullptr);
+  DmaSpi::Transfer trx(nullptr, 0, nullptr);
 
   Serial.println("Testing src -> dest, single transfer");
   Serial.println("--------------------------------------------------");
-  trx = DmaSpi0::Transfer(src, DMASIZE, dest);
+  trx = DmaSpi::Transfer(src, DMASIZE, dest);
   clrDest((uint8_t*)dest);
   DMASPI0.registerTransfer(trx);
   while(trx.busy())
@@ -117,7 +117,7 @@ void setup()
 
   Serial.println("Testing src -> discard, single transfer");
   Serial.println("--------------------------------------------------");
-  trx = DmaSpi0::Transfer(src, DMASIZE, nullptr);
+  trx = DmaSpi::Transfer(src, DMASIZE, nullptr);
   DMASPI0.registerTransfer(trx);
   while(trx.busy())
   {
@@ -137,7 +137,7 @@ void setup()
 
   Serial.println("Testing 0xFF dummy data -> dest, single transfer");
   Serial.println("--------------------------------------------------");
-  trx = DmaSpi0::Transfer(nullptr, DMASIZE, dest, 0xFF);
+  trx = DmaSpi::Transfer(nullptr, DMASIZE, dest, 0xFF);
   memset((void*)src, 0xFF, DMASIZE); // we need this for checking the dest buffer
   clrDest((uint8_t*)dest);
   DMASPI0.registerTransfer(trx);
@@ -151,11 +151,11 @@ void setup()
 
   Serial.println("Testing multiple queued transfers");
   Serial.println("--------------------------------------------------");
-  trx = DmaSpi0::Transfer(src, DMASIZE, dest, 0xFF);
+  trx = DmaSpi::Transfer(src, DMASIZE, dest, 0xFF);
   setSrc();
   clrDest((uint8_t*)dest);
   clrDest((uint8_t*)dest1);
-  DmaSpi0::Transfer trx1(src, DMASIZE, dest1);
+  DmaSpi::Transfer trx1(src, DMASIZE, dest1);
   DMASPI0.registerTransfer(trx);
   DMASPI0.registerTransfer(trx1);
   while(trx.busy());
@@ -202,7 +202,7 @@ void setup()
   Serial.println("--------------------------------------------------");
   ActiveLowChipSelect cs(0, SPISettings());
 //  DebugChipSelect cs;
-  trx = DmaSpi0::Transfer(src, DMASIZE, dest, 0, &cs);
+  trx = DmaSpi::Transfer(src, DMASIZE, dest, 0, &cs);
   clrDest((uint8_t*)dest);
   DMASPI0.registerTransfer(trx);
   while(trx.busy())
@@ -213,7 +213,7 @@ void setup()
   Serial.println("==================================================\n\n");
 
 
-  DmaSpi0::Transfer(src, DMASIZE, dest, 0, &cs);
+  DmaSpi::Transfer(src, DMASIZE, dest, 0, &cs);
 
   if (DMASPI0.stopped())
   {
