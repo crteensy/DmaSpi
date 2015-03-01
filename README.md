@@ -5,10 +5,10 @@ DMA SPI for the Teensy 3.0/3.1/LC
 
 teensyduino 1.21 test #6 branch
 --
-Discussion thread:
-teensyduino 1.21 announcement thread: https://forum.pjrc.com/threads/27403-Teensyduino-1-21-Test-2-Available
-Teensy LC beta testing thread: https://forum.pjrc.com/threads/27689-Teensy-LC-Beta-Testing
-Old 1.20 Discussion thread: http://forum.pjrc.com/threads/26479-DmaSpi-for-teensyduino-1-20-RC2
+- Discussion thread: https://forum.pjrc.com/threads/27909-DmaSpi-for-teensyduino-1-21
+- teensyduino 1.21 announcement thread: https://forum.pjrc.com/threads/27403-Teensyduino-1-21-Test-2-Available
+- Teensy LC beta testing thread: https://forum.pjrc.com/threads/27689-Teensy-LC-Beta-Testing
+- Old 1.20 Discussion thread: http://forum.pjrc.com/threads/26479-DmaSpi-for-teensyduino-1-20-RC2
 
 The DmaSpi library makes use of the following teensyduino features:
 - SPI transactions,
