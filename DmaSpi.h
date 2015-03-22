@@ -295,7 +295,7 @@ class AbstractDmaSpi
     **/
     static void end()
     {
-      if (init_count == 0)
+      if (init_count_ == 0)
       {
         state_ = eError;
         return;
