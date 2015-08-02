@@ -54,14 +54,16 @@ namespace DmaSpi
                   const uint16_t& transferCount = 0,
                   volatile uint8_t* pDest = nullptr,
                   const uint8_t& fill = 0,
-                  AbstractChipSelect* cs = nullptr
+                  AbstractChipSelect* cs = nullptr,
+				  const SPISettings spisettings = SPISettings()
       ) : m_state(State::idle),
         m_pSource(pSource),
         m_transferCount(transferCount),
         m_pDest(pDest),
         m_fill(fill),
         m_pNext(nullptr),
-        m_pSelect(cs)
+        m_pSelect(cs), 
+		m_spisettings(spisettings)
       {
           DMASPI_PRINT(("Transfer @ %p\n", this));
       };
@@ -82,6 +84,8 @@ namespace DmaSpi
       uint8_t m_fill;
       Transfer* m_pNext;
       AbstractChipSelect* m_pSelect;
+	  SPISettings m_spisettings;	
+	
   };
 } // namespace DmaSpi
 
@@ -499,7 +503,7 @@ class AbstractDmaSpi
       }
       else
       {
-        SPI.beginTransaction(SPISettings());
+        SPI.beginTransaction(m_pCurrentTransfer->m_spisettings);
       }
 
       post_cs();
