@@ -15,7 +15,7 @@
 //#define DEBUG_DMASPI 1
 
 #if defined(DEBUG_DMASPI)
-  #define DMASPI_PRINT(x) Serial.printf x ; Serial.flush();
+  #define DMASPI_PRINT(x) do {Serial.printf x ; Serial.flush();} while (0);
 #else
   #define DMASPI_PRINT(x) do {} while (0);
 #endif
