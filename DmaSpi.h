@@ -85,6 +85,8 @@ namespace DmaSpi
   };
 } // namespace DmaSpi
 
+typedef void (*SPI_UserCallback)(void);
+
 template<typename DMASPI_INSTANCE>
 class AbstractDmaSpi
 {
@@ -321,6 +323,8 @@ class AbstractDmaSpi
       return m_devNull;
     }
 
+    static void setCallback(void (*callback)()) {userCallback = callback;};
+
   protected:
     enum EState
     {
@@ -411,6 +415,8 @@ class AbstractDmaSpi
       rxChannel_()->clearInterrupt();
       // end current transfer: deselect and mark as done
       finishCurrentTransfer();
+
+      if(userCallback) (*userCallback)();
 
       DMASPI_PRINT(("  state = "));
       switch(state_)
@@ -511,6 +517,7 @@ class AbstractDmaSpi
     static Transfer* volatile m_pNextTransfer;
     static Transfer* volatile m_pLastTransfer;
     static volatile uint8_t m_devNull;
+    static SPI_UserCallback userCallback;
 };
 
 template<typename DMASPI_INSTANCE>
@@ -530,6 +537,9 @@ typename AbstractDmaSpi<DMASPI_INSTANCE>::Transfer* volatile AbstractDmaSpi<DMAS
 
 template<typename DMASPI_INSTANCE>
 volatile uint8_t AbstractDmaSpi<DMASPI_INSTANCE>::m_devNull = 0;
+
+template<typename DMASPI_INSTANCE>
+SPI_UserCallback AbstractDmaSpi<DMASPI_INSTANCE>::userCallback = 0;
 
 #if defined(KINETISK)
 class DmaSpi0 : public AbstractDmaSpi<DmaSpi0>
