@@ -85,12 +85,13 @@ namespace DmaSpi
   };
 } // namespace DmaSpi
 
-template<typename DMASPI_INSTANCE>
+template<typename DMASPI_INSTANCE, typename SPICLASS, SPICLASS& m_Spi>
 class AbstractDmaSpi
 {
   public:
     using Transfer = DmaSpi::Transfer;
 
+/*
     #if defined(KINETISK)
       typedef KINETISK_SPI_t SPI_t;
     #elif defined(KINETISL)
@@ -98,6 +99,7 @@ class AbstractDmaSpi
     #else
       #error I do not know how to handle your chip: neither KINETISK nor KINETISL defined.
     #endif
+*/
 
    /** \brief arduino-style initialization.
      *
@@ -359,7 +361,7 @@ class AbstractDmaSpi
       }
       else
       {
-        SPI.endTransaction();
+        m_Spi.endTransaction();
       }
       m_pCurrentTransfer->m_state = Transfer::State::eDone;
       DMASPI_PRINT(("  finishCurrentTransfer() @ %p\n", m_pCurrentTransfer));
@@ -499,7 +501,7 @@ class AbstractDmaSpi
       }
       else
       {
-        SPI.beginTransaction(SPISettings());
+        m_Spi.beginTransaction(SPISettings());
       }
 
       post_cs();
@@ -511,28 +513,75 @@ class AbstractDmaSpi
     static Transfer* volatile m_pNextTransfer;
     static Transfer* volatile m_pLastTransfer;
     static volatile uint8_t m_devNull;
+    //static SPICLASS& m_Spi;
 };
 
-template<typename DMASPI_INSTANCE>
-size_t AbstractDmaSpi<DMASPI_INSTANCE>::init_count_ = 0;
+template<typename DMASPI_INSTANCE, typename SPICLASS, SPICLASS& m_Spi>
+size_t AbstractDmaSpi<DMASPI_INSTANCE, SPICLASS, m_Spi>::init_count_ = 0;
 
-template<typename DMASPI_INSTANCE>
-volatile typename AbstractDmaSpi<DMASPI_INSTANCE>::EState AbstractDmaSpi<DMASPI_INSTANCE>::state_ = eError;
+template<typename DMASPI_INSTANCE, typename SPICLASS, SPICLASS& m_Spi>
+volatile typename AbstractDmaSpi<DMASPI_INSTANCE, SPICLASS, m_Spi>::EState AbstractDmaSpi<DMASPI_INSTANCE, SPICLASS, m_Spi>::state_ = eError;
 
-template<typename DMASPI_INSTANCE>
-typename AbstractDmaSpi<DMASPI_INSTANCE>::Transfer* volatile AbstractDmaSpi<DMASPI_INSTANCE>::m_pNextTransfer = nullptr;
+template<typename DMASPI_INSTANCE, typename SPICLASS, SPICLASS& m_Spi>
+typename AbstractDmaSpi<DMASPI_INSTANCE, SPICLASS, m_Spi>::Transfer* volatile AbstractDmaSpi<DMASPI_INSTANCE, SPICLASS, m_Spi>::m_pNextTransfer = nullptr;
 
-template<typename DMASPI_INSTANCE>
-typename AbstractDmaSpi<DMASPI_INSTANCE>::Transfer* volatile AbstractDmaSpi<DMASPI_INSTANCE>::m_pCurrentTransfer = nullptr;
+template<typename DMASPI_INSTANCE, typename SPICLASS, SPICLASS& m_Spi>
+typename AbstractDmaSpi<DMASPI_INSTANCE, SPICLASS, m_Spi>::Transfer* volatile AbstractDmaSpi<DMASPI_INSTANCE, SPICLASS, m_Spi>::m_pCurrentTransfer = nullptr;
 
-template<typename DMASPI_INSTANCE>
-typename AbstractDmaSpi<DMASPI_INSTANCE>::Transfer* volatile AbstractDmaSpi<DMASPI_INSTANCE>::m_pLastTransfer = nullptr;
+template<typename DMASPI_INSTANCE, typename SPICLASS, SPICLASS& m_Spi>
+typename AbstractDmaSpi<DMASPI_INSTANCE, SPICLASS, m_Spi>::Transfer* volatile AbstractDmaSpi<DMASPI_INSTANCE, SPICLASS, m_Spi>::m_pLastTransfer = nullptr;
 
-template<typename DMASPI_INSTANCE>
-volatile uint8_t AbstractDmaSpi<DMASPI_INSTANCE>::m_devNull = 0;
+template<typename DMASPI_INSTANCE, typename SPICLASS, SPICLASS& m_Spi>
+volatile uint8_t AbstractDmaSpi<DMASPI_INSTANCE, SPICLASS, m_Spi>::m_devNull = 0;
 
-#if defined(KINETISK)
-class DmaSpi0 : public AbstractDmaSpi<DmaSpi0>
+#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
+
+class DmaSpi0 : public AbstractDmaSpi<DmaSpi0, SPIClass, SPI>
+{
+public:
+  static void begin_setup_txChannel_impl()
+  {
+    txChannel_()->disable();
+    txChannel_()->destination((volatile uint8_t&)SPI0_PUSHR);
+    txChannel_()->disableOnCompletion();
+    txChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_TX);
+  }
+
+  static void begin_setup_rxChannel_impl()
+  {
+    txChannel_()->disable();
+    rxChannel_()->source((volatile uint8_t&)SPI0_POPR);
+    rxChannel_()->disableOnCompletion();
+    rxChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_RX);
+    rxChannel_()->attachInterrupt(rxIsr_);
+    rxChannel_()->interruptAtCompletion();
+  }
+
+  static void pre_cs_impl()
+  {
+    SPI0_SR = 0xFF0F0000;
+    SPI0_RSER = SPI_RSER_RFDF_RE | SPI_RSER_RFDF_DIRS | SPI_RSER_TFFF_RE | SPI_RSER_TFFF_DIRS;
+  }
+
+  static void post_cs_impl()
+  {
+    rxChannel_()->enable();
+    txChannel_()->enable();
+  }
+
+  static void post_finishCurrentTransfer_impl()
+  {
+    SPI0_RSER = 0;
+    SPI0_SR = 0xFF0F0000;
+  }
+
+private:
+};
+
+extern DmaSpi0 DMASPI0;
+
+#elif defined(KINETISK)
+class DmaSpi0 : public AbstractDmaSpi<DmaSpi0, SPIClass, SPI>
 {
 public:
   static void begin_setup_txChannel_impl()
@@ -577,7 +626,7 @@ private:
 extern DmaSpi0 DMASPI0;
 
 #elif defined(KINETISL)
-class DmaSpi0 : public AbstractDmaSpi<DmaSpi0>
+class DmaSpi0 : public AbstractDmaSpi<DmaSpi0, SPIClass, SPI>
 {
 public:
   static void begin_setup_txChannel_impl()
@@ -621,9 +670,8 @@ public:
 private:
 };
 
-class DmaSpi1 : public AbstractDmaSpi<DmaSpi1>
+class DmaSpi1 : public AbstractDmaSpi<DmaSpi1, SPI1Class, SPI1>
 {
-public:
 public:
   static void begin_setup_txChannel_impl()
   {
