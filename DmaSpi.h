@@ -578,25 +578,25 @@ public:
   static void begin_setup_txChannel_impl()
   {
     txChannel_()->disable();
-    txChannel_()->destination((volatile uint8_t&)SPI0_PUSHR);
+    txChannel_()->destination((volatile uint8_t&)SPI1_PUSHR);
     txChannel_()->disableOnCompletion();
-    txChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_TX);
+    txChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI1_TX);
   }
 
   static void begin_setup_rxChannel_impl()
   {
     txChannel_()->disable();
-    rxChannel_()->source((volatile uint8_t&)SPI0_POPR);
+    rxChannel_()->source((volatile uint8_t&)SPI1_POPR);
     rxChannel_()->disableOnCompletion();
-    rxChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_RX);
+    rxChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI1_RX);
     rxChannel_()->attachInterrupt(rxIsr_);
     rxChannel_()->interruptAtCompletion();
   }
 
   static void pre_cs_impl()
   {
-    SPI0_SR = 0xFF0F0000;
-    SPI0_RSER = SPI_RSER_RFDF_RE | SPI_RSER_RFDF_DIRS | SPI_RSER_TFFF_RE | SPI_RSER_TFFF_DIRS;
+    SPI1_SR = 0xFF0F0000;
+    SPI1_RSER = SPI_RSER_RFDF_RE | SPI_RSER_RFDF_DIRS | SPI_RSER_TFFF_RE | SPI_RSER_TFFF_DIRS;
   }
 
   static void post_cs_impl()
@@ -607,8 +607,8 @@ public:
 
   static void post_finishCurrentTransfer_impl()
   {
-    SPI0_RSER = 0;
-    SPI0_SR = 0xFF0F0000;
+    SPI1_RSER = 0;
+    SPI1_SR = 0xFF0F0000;
   }
 
 private:
@@ -621,25 +621,25 @@ public:
   static void begin_setup_txChannel_impl()
   {
     txChannel_()->disable();
-    txChannel_()->destination((volatile uint8_t&)SPI0_PUSHR);
+    txChannel_()->destination((volatile uint8_t&)SPI2_PUSHR);
     txChannel_()->disableOnCompletion();
-    txChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_TX);
+    txChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI2_TX);
   }
 
   static void begin_setup_rxChannel_impl()
   {
     txChannel_()->disable();
-    rxChannel_()->source((volatile uint8_t&)SPI0_POPR);
+    rxChannel_()->source((volatile uint8_t&)SPI2_POPR);
     rxChannel_()->disableOnCompletion();
-    rxChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_RX);
+    rxChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI2_RX);
     rxChannel_()->attachInterrupt(rxIsr_);
     rxChannel_()->interruptAtCompletion();
   }
 
   static void pre_cs_impl()
   {
-    SPI0_SR = 0xFF0F0000;
-    SPI0_RSER = SPI_RSER_RFDF_RE | SPI_RSER_RFDF_DIRS | SPI_RSER_TFFF_RE | SPI_RSER_TFFF_DIRS;
+    SPI2_SR = 0xFF0F0000;
+    SPI2_RSER = SPI_RSER_RFDF_RE | SPI_RSER_RFDF_DIRS | SPI_RSER_TFFF_RE | SPI_RSER_TFFF_DIRS;
   }
 
   static void post_cs_impl()
@@ -650,8 +650,8 @@ public:
 
   static void post_finishCurrentTransfer_impl()
   {
-    SPI0_RSER = 0;
-    SPI0_SR = 0xFF0F0000;
+    SPI2_RSER = 0;
+    SPI2_SR = 0xFF0F0000;
   }
 
 private:
