@@ -1,14 +1,9 @@
 DmaSpi
 ======
 
-DMA SPI for the Teensy 3.0/3.1/LC
+DMA SPI for the Teensy 3.0/3.1/LC/ 3.5 and 3.6 (experimental)
 
-teensyduino 1.21 test #6 branch
---
-- Discussion thread: https://forum.pjrc.com/threads/27909-DmaSpi-for-teensyduino-1-21
-- teensyduino 1.21 announcement thread: https://forum.pjrc.com/threads/27403-Teensyduino-1-21-Test-2-Available
-- Teensy LC beta testing thread: https://forum.pjrc.com/threads/27689-Teensy-LC-Beta-Testing
-- Old 1.20 Discussion thread: http://forum.pjrc.com/threads/26479-DmaSpi-for-teensyduino-1-20-RC2
+Current development discussion thread: https://forum.pjrc.com/threads/35760-DMASPI-library-needs-some-(probably-breaking)-changes-to-really-support-multiple-SPIs
 
 The DmaSpi library makes use of the following teensyduino features:
 - SPI transactions,
@@ -25,7 +20,7 @@ Requirements
 Features
 --
 - A data source is optional.
-  If only dummy data has to be sent to a slave, that's possible;
+  If only dummy data has to be sent to a slave, that's possible without a data source buffer;
 - A sink for data received from a slave is optional.
   Slave data can be discarded;
 - The maximum transfer length is 32767;
@@ -33,19 +28,19 @@ Features
 - The DmaSpi can be started and stopped if necessary.
   It can be used along with other drivers that use the SPI in non-DMA mode.
 
-An example that shows a lot of the functionality is in the examples folder. This example only shows how to use SPI0; SPI1 (Teensy LC) is untested.
+An example that shows a lot of the functionality is in the examples folder. This example only shows how to use SPI0; SPI1 and SPI2 (if present) are not used.
 
 Some Notes
 --
-- The Teensy LC introduced a second working SPI. There is now an abstract base class (AbstractDmaSpi) which has all the code that is not
-  chip-specific. Only the chip-specific code is in the derived classes DmaSpi0 and DmaSpi1. All methods and variables are static so that
+- The Teensy LC introduced a second working SPI, Teensy 3.5 nd 3.6 even have a third. There is now an abstract base class (AbstractDmaSpi) which has all the code that is not
+  chip-specific. Only the chip-specific code is in the derived classes DmaSpi0, DmaSpi1 and DmaSpi2. All methods and variables are static so that
   it's not dangerous to create multiple instances of the classes - they access the same static state.
-- the first call to begin() initializes DmaSpi0 or DmaSpi1. Further calls have no effect until a matching number of calls to end()
-  have been made. The last call to end() de-initializes DmaSpi0 or DmaSpi1.
+- the first call to begin() initializes DmaSpi. Further calls have no effect until a matching number of calls to end()
+  have been made. The last call to end() de-initializes DmaSpi.
 - One instance of each DmaSpi class is created, they are called DMASPI0 (Teensy 3.0, 3.1 and LC)
-  and DMASPI1 (Teensy LC only). If the DmaSpi header is included, these are visible.
+  DMASPI1 (Teensy LC, 3.5, 3.6). If the DmaSpi header is included, these are visible.
 - The Transfer class has been moved into a namespace called DmaSpi. The two DmaSpi classes import this type, so it's possible to use
-  `DmaSpi::Transfer`, `DmaSpi0::Transfer`, `DMASPI0::Transfer`, `DmaSpi1::Transfer` and `DMASPI1::Transfer`.
+  `DmaSpi::Transfer`, `DmaSpi0::Transfer`, `DMASPI0::Transfer`, `DmaSpi1::Transfer`, `DMASPI1::Transfer`, `DmaSpi2::Transfer`, `DMASPI2::Transfer`.
 - With a bit of trickery, it's possible to write code that uses either DmaSpi class through the base class `AbstractDmaSpi`.
 
 Installation
