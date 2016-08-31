@@ -39,6 +39,9 @@ class DebugChipSelect : public AbstractChipSelect
 };
 
 /** \brief An active low chip select class. This also configures the given pin.
+ * Warning: This class is hardcoded to manage a transaction on SPI (SPI0, that is).
+ * If you want to use SPI1 or SPI2, you can copy this class to something named AbstractChipSelect1, and adapt the implementation accordingly.
+ * Something more flexible is on the way.
 **/
 class ActiveLowChipSelect : public AbstractChipSelect
 {
