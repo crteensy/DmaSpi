@@ -539,7 +539,7 @@ public:
 
   static void begin_setup_rxChannel_impl()
   {
-    txChannel_()->disable();
+    rxChannel_()->disable();
     rxChannel_()->source((volatile uint8_t&)SPI0_POPR);
     rxChannel_()->disableOnCompletion();
     rxChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_SPI0_RX);
