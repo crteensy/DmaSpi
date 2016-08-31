@@ -6,11 +6,16 @@
 /** Important
   The sketch waits for user input through Serial (USB) before it starts the setup.
   After any key was pressed, it should begin to work. It will ask for a second keypress later.
+  
+  This example cannot simply be modified to use SPI1 or SPI2 instead of SPI0 because ActiveLowChipSelect is
+  hardcoded to use SPI (SPI0).
+  If you want to use SPI1 or SPI2, you need to create a new chip select class to reflect this.
 **/
 
 /** Hardware setup:
- plain Teensy 3.1 with DOUT (11) connected to DIN (12)
- nothing else
+ Teensy 3.1, 3.2: DOUT (11) connected to DIN (12)
+ Teensy LC: DOUT (11) connected to DIN (12)
+ Teensy 3.5, 3.6: DOUT (11) connected to DIN (12)
 **/
 
 /** buffers to send from and to receive to **/
