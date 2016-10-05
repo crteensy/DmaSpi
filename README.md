@@ -1,7 +1,7 @@
 DmaSpi
 ======
 
-DMA SPI for the Teensy 3.0/3.1/LC/ 3.5 (doesn't work at all yet) and 3.6 (experimental, but promising)
+DMA SPI for the Teensy 3.0, 3.1, 3.2, LC (these work), 3.5 (doesn't work at all yet) and 3.6 (experimental, but promising, SPI0 and SPi1 seem to be fine)
 
 Current development discussion thread: https://forum.pjrc.com/threads/35760-DMASPI-library-needs-some-(probably-breaking)-changes-to-really-support-multiple-SPIs
 
