@@ -31,7 +31,7 @@ An example that shows a lot of the functionality is in the examples folder. This
 
 Some Notes
 --
-- The Teensy LC introduced a second working SPI, Teensy 3.5 and 3.6 even have a three. There is now an abstract base class (AbstractDmaSpi) which has all the code that is not
+- The Teensy LC introduced a second working SPI, Teensy 3.5 and 3.6 even have three. There is now an abstract base class (AbstractDmaSpi) which has all the code that is not
   chip-specific. Only the chip-specific code is in the derived classes DmaSpi0, DmaSpi1 and DmaSpi2. All methods and variables are static so that
   it's not dangerous to create multiple instances of the classes - they access the same static state.
 - The ActiveLowChipSelect class is meant to be an example to be used with SPI. It will not work with SPI1 or SPI2 because it is hard-coded to use that one SPI only. You can copy its source code and adapt it accordingly, see ChipSelect.h.
