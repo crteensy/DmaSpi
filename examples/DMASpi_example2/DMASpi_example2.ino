@@ -7,15 +7,16 @@
   The sketch waits for user input through Serial (USB) before it starts the setup.
   After any key was pressed, it should begin to work. It will ask for a second keypress later.
   
-  This example cannot simply be modified to use SPI1 or SPI2 instead of SPI0 because ActiveLowChipSelect is
-  hardcoded to use SPI (SPI0).
-  If you want to use SPI1 or SPI2, you need to create a new chip select class to reflect this.
+  This example cannot simply be modified to use SPI0 or SPI2 instead of SPI1 because ActiveLowChipSelect1 is
+  hardcoded to use SPI1.
+  If you want to use SPI0: see DMASpi_example1.
+  If you want to use SPI2: adapt example and create a new chip select class.
 **/
 
 /** Hardware setup:
- Teensy 3.1, 3.2: DOUT (11) connected to DIN (12)
- Teensy LC: DOUT (11) connected to DIN (12)
- Teensy 3.5, 3.6: DOUT (11) connected to DIN (12)
+ Teensy LC: DOUT (pin 0) connected to DIN (pin 1)
+ Teensy 3.5, 3.6: DOUT (pin 0) connected to DIN (pin 1)
+ Pin 0 is used as a chip select pin, don't connect anything there.
 **/
 
 /** buffers to send from and to receive to **/
@@ -205,7 +206,7 @@ void setup()
 
   Serial.println("Testing src -> dest, with chip select object");
   Serial.println("--------------------------------------------------");
-  ActiveLowChipSelect cs(0, SPISettings());
+  ActiveLowChipSelect1 cs(2, SPISettings());
 //  DebugChipSelect cs;
   trx = DmaSpi::Transfer(src, DMASIZE, dest, 0, &cs);
   clrDest((uint8_t*)dest);
