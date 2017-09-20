@@ -16,7 +16,7 @@
 /** Hardware setup:
  Teensy LC: DOUT (pin 0) connected to DIN (pin 1)
  Teensy 3.5, 3.6: DOUT (pin 0) connected to DIN (pin 1)
- Pin 0 is used as a chip select pin, don't connect anything there.
+ Pin 2 is used as a chip select pin, don't connect anything there.
 **/
 
 /** buffers to send from and to receive to **/
