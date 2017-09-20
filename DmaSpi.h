@@ -572,7 +572,7 @@ extern DmaSpi0 DMASPI0;
 
 #if defined(__MK64FX512__) || defined(__MK66FX1M0__)
 
-class DmaSpi1 : public AbstractDmaSpi<DmaSpi1, SPI1Class, SPI1>
+class DmaSpi1 : public AbstractDmaSpi<DmaSpi1, SPIClass, SPI1>
 {
 public:
   static void begin_setup_txChannel_impl()
@@ -615,7 +615,7 @@ private:
 };
 
 /*
-class DmaSpi2 : public AbstractDmaSpi<DmaSpi2, SPI2Class, SPI2>
+class DmaSpi2 : public AbstractDmaSpi<DmaSpi2, SPIClass, SPI2>
 {
 public:
   static void begin_setup_txChannel_impl()
@@ -707,7 +707,7 @@ public:
 private:
 };
 
-class DmaSpi1 : public AbstractDmaSpi<DmaSpi1, SPI1Class, SPI1>
+class DmaSpi1 : public AbstractDmaSpi<DmaSpi1, SPIClass, SPI1>
 {
 public:
   static void begin_setup_txChannel_impl()
@@ -735,8 +735,16 @@ public:
     SPI1_C2 |= SPI_C2_TXDMAE | SPI_C2_RXDMAE;
   }
 
+//  static void dumpCFG(const char *sz, uint32_t* p)
+//  {
+//    DMASPI_PRINT(("%s: %x %x %x %x \n", sz, p[0], p[1], p[2], p[3]));
+//  }
+  
   static void post_cs_impl()
   {
+    DMASPI_PRINT(("post_cs S C1 C2: %x %x %x\n", SPI1_S, SPI1_C1, SPI1_C2));
+//    dumpCFG("RX", (uint32_t*)(void*)rxChannel_()->CFG);
+//    dumpCFG("TX", (uint32_t*)(void*)txChannel_()->CFG);
     rxChannel_()->enable();
     txChannel_()->enable();
   }
