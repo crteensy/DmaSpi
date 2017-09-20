@@ -1,7 +1,27 @@
 DmaSpi
 ======
 
-DMA SPI for the Teensy 3.0, 3.1, 3.2, LC (these work), 3.5 (doesn't work at all yet) and 3.6 (experimental, but promising, SPI0 and SPi1 seem to be fine)
+DMA SPI for the Teensy family of ARM microcontroller boards.
+
+Current teensyduino version: 1.39 release
+
+What works:
+
+| Teensy | SPI0 | SPI1 | SPI2 |
+| -      | -    | -    | -    |
+| 3.6    | yes  | yes  | n/i  |
+| 3.5    | exp  | no   | n/i  |
+| 3.2    | exp  | --   | --   |
+| 3.1    | exp  | --   | --   |
+| 3.0    | exp  | --   | --   |
+| LC     | exp  | exp  | --   |
+
+where
+- yes: tested and works
+- no: tested and doesn't work or doesn't seem feasible
+- exp: should work, but not sure
+- n/i: not implemented yet
+- --: SPI doesn't exist
 
 Current development discussion thread: https://forum.pjrc.com/threads/35760-DMASPI-library-needs-some-(probably-breaking)-changes-to-really-support-multiple-SPIs
 
