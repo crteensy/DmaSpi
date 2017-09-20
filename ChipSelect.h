@@ -40,13 +40,14 @@ class DebugChipSelect : public AbstractChipSelect
 
 /** \brief An active low chip select class. This also configures the given pin.
  * Warning: This class is hardcoded to manage a transaction on SPI (SPI0, that is).
- * If you want to use SPI1 or SPI2, you can copy this class to something named AbstractChipSelect1, and adapt the implementation accordingly.
+ * If you want to use SPI1: Use AbstractChipSelect1 (see below)
+ * If you want to use SPI2: Create AbstractChipSelect2 (adapt the implementation accordingly).
  * Something more flexible is on the way.
 **/
 class ActiveLowChipSelect : public AbstractChipSelect
 {
   public:
-    /** Configues a chip select pin for OUTPUT mode,
+    /** Configures a chip select pin for OUTPUT mode,
      * manages the chip selection and a corresponding SPI transaction
      *
      * The chip select pin is asserted \e after the SPI settings are applied
@@ -76,6 +77,40 @@ class ActiveLowChipSelect : public AbstractChipSelect
     {
       digitalWriteFast(pin_, 1);
       SPI.endTransaction();
+    }
+  private:
+    const unsigned int pin_;
+    const SPISettings settings_;
+
+};
+
+class ActiveLowChipSelect1 : public AbstractChipSelect
+{
+  public:
+    /** Equivalent to AbstractChipSelect, but for SPI1.
+    **/
+    ActiveLowChipSelect1(const unsigned int& pin, const SPISettings& settings)
+      : pin_(pin),
+      settings_(settings)
+    {
+      pinMode(pin, OUTPUT);
+      digitalWriteFast(pin, 1);
+    }
+
+    /** \brief begins an SPI transaction selects the chip (sets the pin to low) and
+    **/
+    void select() override
+    {
+      SPI1.beginTransaction(settings_);
+      digitalWriteFast(pin_, 0);
+    }
+
+    /** \brief deselects the chip (sets the pin to high) and ends the SPI transaction
+    **/
+    void deselect() override
+    {
+      digitalWriteFast(pin_, 1);
+      SPI1.endTransaction();
     }
   private:
     const unsigned int pin_;

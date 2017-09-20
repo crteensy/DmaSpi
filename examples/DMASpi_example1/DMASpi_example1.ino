@@ -9,13 +9,15 @@
   
   This example cannot simply be modified to use SPI1 or SPI2 instead of SPI0 because ActiveLowChipSelect is
   hardcoded to use SPI (SPI0).
-  If you want to use SPI1 or SPI2, you need to create a new chip select class to reflect this.
+  If you want to use SPI1: see DMASpi_example2.
+  If you want to use SPI2: adapt example and create a new chip select class.
 **/
 
 /** Hardware setup:
  Teensy 3.1, 3.2: DOUT (11) connected to DIN (12)
  Teensy LC: DOUT (11) connected to DIN (12)
  Teensy 3.5, 3.6: DOUT (11) connected to DIN (12)
+ Pin 0 is used as a chip select pin, don't connect anything there.
 **/
 
 /** buffers to send from and to receive to **/
