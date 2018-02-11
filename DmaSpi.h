@@ -54,14 +54,16 @@ namespace DmaSpi
                   const uint16_t& transferCount = 0,
                   volatile uint8_t* pDest = nullptr,
                   const uint8_t& fill = 0,
-                  AbstractChipSelect* cs = nullptr
+                  AbstractChipSelect* cs = nullptr,
+                  TransferType transferType = TransferType::NORMAL
       ) : m_state(State::idle),
         m_pSource(pSource),
         m_transferCount(transferCount),
         m_pDest(pDest),
         m_fill(fill),
         m_pNext(nullptr),
-        m_pSelect(cs)
+        m_pSelect(cs),
+        m_transferType(transferType)
       {
           DMASPI_PRINT(("Transfer @ %p\n", this));
       };
@@ -82,6 +84,7 @@ namespace DmaSpi
       uint8_t m_fill;
       Transfer* m_pNext;
       AbstractChipSelect* m_pSelect;
+      TransferType m_transferType;
   };
 } // namespace DmaSpi
 
@@ -209,6 +212,7 @@ class AbstractDmaSpi
       }
       return true;
     }
+
 
     /** \brief Check if the DMA SPI is busy, which means that it is currently handling a Transfer.
      \return true if a Transfer is being handled.
@@ -347,7 +351,7 @@ class AbstractDmaSpi
     {
       if (m_pCurrentTransfer->m_pSelect != nullptr)
       {
-        m_pCurrentTransfer->m_pSelect->deselect();
+        m_pCurrentTransfer->m_pSelect->deselect(m_pCurrentTransfer->m_transferType);
       }
       else
       {
@@ -487,7 +491,7 @@ class AbstractDmaSpi
       // Select Chip
       if (m_pCurrentTransfer->m_pSelect != nullptr)
       {
-        m_pCurrentTransfer->m_pSelect->select();
+        m_pCurrentTransfer->m_pSelect->select(m_pCurrentTransfer->m_transferType);
       }
       else
       {
