@@ -115,7 +115,7 @@ class ActiveLowChipSelect1 : public AbstractChipSelect
 
     /** \brief begins an SPI transaction selects the chip (sets the pin to low) and
     **/
-    void select(const unsigned int& pin, const SPISettings& settings) override
+    void select(TransferType transferType = TransferType::NORMAL) override
     {
       SPI1.beginTransaction(settings_);
       if (transferType == TransferType::NO_START_CS) {
