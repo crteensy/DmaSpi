@@ -88,6 +88,7 @@ namespace DmaSpi
   };
 } // namespace DmaSpi
 
+
 template<typename DMASPI_INSTANCE, typename SPICLASS, SPICLASS& m_Spi>
 class AbstractDmaSpi
 {
@@ -769,6 +770,108 @@ extern DmaSpi1 DMASPI1;
 
 #error Unknown chip
 
-#endif // KINETISK else KINETISL 
+#endif // KINETISK else KINETISL
+
+class DmaSpiGeneric
+{
+public:
+	using Transfer = DmaSpi::Transfer;
+
+	DmaSpiGeneric() {
+		m_spiDma0 = &DMASPI0;
+		m_spiDma1 = &DMASPI1;
+	}
+	DmaSpiGeneric(int spiId) : DmaSpiGeneric() {
+		m_spiSelect = spiId;
+	}
+
+	bool begin () {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->begin();
+		default :
+			return m_spiDma0->begin();
+		}
+	}
+
+	void start () {
+		switch(m_spiSelect) {
+		case 1 : m_spiDma1->start(); return;
+		default :
+			m_spiDma0->start(); return;
+		}
+	}
+
+	bool running () {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->running();
+		default :
+			return m_spiDma0->running();
+		}
+	}
+
+	bool registerTransfer (Transfer& transfer) {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->registerTransfer(transfer);
+		default :
+			return m_spiDma0->registerTransfer(transfer);
+		}
+	}
+
+
+	bool busy () {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->busy();
+		default :
+			return m_spiDma0->busy();
+		}
+	}
+
+	void stop () {
+		switch(m_spiSelect) {
+		case 1 : m_spiDma1->stop(); return;
+		default :
+			m_spiDma0->stop(); return;
+		}
+	}
+
+	bool stopping () {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->stopping();
+		default :
+			return m_spiDma0->stopping();
+		}
+	}
+
+	bool stopped () {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->stopped();
+		default :
+			return m_spiDma0->stopped();
+		}
+	}
+
+	void end () {
+		switch(m_spiSelect) {
+		case 1 : m_spiDma1->end(); return;
+		default :
+			m_spiDma0->end(); return;
+		}
+	}
+
+	uint8_t devNull () {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->devNull();
+		default :
+			return m_spiDma0->devNull();
+		}
+	}
+
+private:
+	int m_spiSelect = 0;
+	DmaSpi0 *m_spiDma0 = nullptr;
+	DmaSpi1 *m_spiDma1 = nullptr;
+
+};
+
 
 #endif // DMASPI_H
