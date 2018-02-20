@@ -3,6 +3,15 @@
 
 #include <core_pins.h>
 
+/** \brief Specifies the desired CS suppression
+**/
+enum TransferType
+{
+  NORMAL,      //*< The transfer will use CS at beginning and end **/
+  NO_START_CS, //*< Skip the CS activation at the start **/
+  NO_END_CS    //*< SKip the CS deactivation at the end **/
+};
+
 /** \brief An abstract base class that provides an interface for chip select classes.
 **/
 class AbstractChipSelect
@@ -10,11 +19,11 @@ class AbstractChipSelect
 	public:
     /** \brief Called to select a chip. The implementing class can do other things as well.
     **/
-    virtual void select() = 0;
+    virtual void select(TransferType transferType = TransferType::NORMAL) = 0;
 
     /** \brief Called to deselect a chip. The implementing class can do other things as well.
     **/
-    virtual void deselect() = 0;
+    virtual void deselect(TransferType transferType = TransferType::NORMAL) = 0;
 
     /** \brief the virtual destructor needed to inherit from this class **/
 		virtual ~AbstractChipSelect() {}
@@ -24,9 +33,9 @@ class AbstractChipSelect
 /** \brief "do nothing" chip select class **/
 class DummyChipSelect : public AbstractChipSelect
 {
-  void select() override {}
+  void select(TransferType transferType = TransferType::NORMAL) override {}
 
-  void deselect() override {}
+  void deselect(TransferType transferType = TransferType::NORMAL) override {}
 };
 
 /** \brief "do nothing" chip select class that
@@ -34,8 +43,8 @@ class DummyChipSelect : public AbstractChipSelect
 **/
 class DebugChipSelect : public AbstractChipSelect
 {
-  void select() override {Serial.println("Debug CS: select()");}
-  void deselect() override {Serial.println("Debug CS: deselect()");}
+  void select(TransferType transferType = TransferType::NORMAL) override {Serial.println("Debug CS: select()");}
+  void deselect(TransferType transferType = TransferType::NORMAL) override {Serial.println("Debug CS: deselect()");}
 };
 
 /** \brief An active low chip select class. This also configures the given pin.
@@ -65,17 +74,23 @@ class ActiveLowChipSelect : public AbstractChipSelect
 
     /** \brief begins an SPI transaction selects the chip (sets the pin to low) and
     **/
-    void select() override
+    void select(TransferType transferType = TransferType::NORMAL) override
     {
       SPI.beginTransaction(settings_);
+      if (transferType == TransferType::NO_START_CS) {
+    	  return;
+      }
       digitalWriteFast(pin_, 0);
     }
 
     /** \brief deselects the chip (sets the pin to high) and ends the SPI transaction
     **/
-    void deselect() override
+    void deselect(TransferType transferType = TransferType::NORMAL) override
     {
-      digitalWriteFast(pin_, 1);
+      if (transferType == TransferType::NO_END_CS) {
+      } else {
+    	  digitalWriteFast(pin_, 1);
+      }
       SPI.endTransaction();
     }
   private:
@@ -84,6 +99,7 @@ class ActiveLowChipSelect : public AbstractChipSelect
 
 };
 
+#if defined(__MK64FX512__) || defined(__MK66FX1M0__)
 class ActiveLowChipSelect1 : public AbstractChipSelect
 {
   public:
@@ -99,17 +115,23 @@ class ActiveLowChipSelect1 : public AbstractChipSelect
 
     /** \brief begins an SPI transaction selects the chip (sets the pin to low) and
     **/
-    void select() override
+    void select(TransferType transferType = TransferType::NORMAL) override
     {
       SPI1.beginTransaction(settings_);
+      if (transferType == TransferType::NO_START_CS) {
+        return;
+      }
       digitalWriteFast(pin_, 0);
     }
 
     /** \brief deselects the chip (sets the pin to high) and ends the SPI transaction
     **/
-    void deselect() override
+    void deselect(TransferType transferType = TransferType::NORMAL) override
     {
-      digitalWriteFast(pin_, 1);
+      if (transferType == TransferType::NO_END_CS) {
+      } else {
+        digitalWriteFast(pin_, 1);
+      }
       SPI1.endTransaction();
     }
   private:
@@ -117,6 +139,8 @@ class ActiveLowChipSelect1 : public AbstractChipSelect
     const SPISettings settings_;
 
 };
+#endif
+
 
 #endif // CHIPSELECT_H
 

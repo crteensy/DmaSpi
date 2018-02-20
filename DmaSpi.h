@@ -54,14 +54,16 @@ namespace DmaSpi
                   const uint16_t& transferCount = 0,
                   volatile uint8_t* pDest = nullptr,
                   const uint8_t& fill = 0,
-                  AbstractChipSelect* cs = nullptr
+                  AbstractChipSelect* cs = nullptr,
+                  TransferType transferType = TransferType::NORMAL
       ) : m_state(State::idle),
         m_pSource(pSource),
         m_transferCount(transferCount),
         m_pDest(pDest),
         m_fill(fill),
         m_pNext(nullptr),
-        m_pSelect(cs)
+        m_pSelect(cs),
+        m_transferType(transferType)
       {
           DMASPI_PRINT(("Transfer @ %p\n", this));
       };
@@ -82,8 +84,10 @@ namespace DmaSpi
       uint8_t m_fill;
       Transfer* m_pNext;
       AbstractChipSelect* m_pSelect;
+      TransferType m_transferType;
   };
 } // namespace DmaSpi
+
 
 template<typename DMASPI_INSTANCE, typename SPICLASS, SPICLASS& m_Spi>
 class AbstractDmaSpi
@@ -209,6 +213,7 @@ class AbstractDmaSpi
       }
       return true;
     }
+
 
     /** \brief Check if the DMA SPI is busy, which means that it is currently handling a Transfer.
      \return true if a Transfer is being handled.
@@ -347,7 +352,7 @@ class AbstractDmaSpi
     {
       if (m_pCurrentTransfer->m_pSelect != nullptr)
       {
-        m_pCurrentTransfer->m_pSelect->deselect();
+        m_pCurrentTransfer->m_pSelect->deselect(m_pCurrentTransfer->m_transferType);
       }
       else
       {
@@ -487,7 +492,7 @@ class AbstractDmaSpi
       // Select Chip
       if (m_pCurrentTransfer->m_pSelect != nullptr)
       {
-        m_pCurrentTransfer->m_pSelect->select();
+        m_pCurrentTransfer->m_pSelect->select(m_pCurrentTransfer->m_transferType);
       }
       else
       {
@@ -765,6 +770,108 @@ extern DmaSpi1 DMASPI1;
 
 #error Unknown chip
 
-#endif // KINETISK else KINETISL 
+#endif // KINETISK else KINETISL
+
+class DmaSpiGeneric
+{
+public:
+	using Transfer = DmaSpi::Transfer;
+
+	DmaSpiGeneric() {
+		m_spiDma0 = &DMASPI0;
+		m_spiDma1 = &DMASPI1;
+	}
+	DmaSpiGeneric(int spiId) : DmaSpiGeneric() {
+		m_spiSelect = spiId;
+	}
+
+	bool begin () {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->begin();
+		default :
+			return m_spiDma0->begin();
+		}
+	}
+
+	void start () {
+		switch(m_spiSelect) {
+		case 1 : m_spiDma1->start(); return;
+		default :
+			m_spiDma0->start(); return;
+		}
+	}
+
+	bool running () {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->running();
+		default :
+			return m_spiDma0->running();
+		}
+	}
+
+	bool registerTransfer (Transfer& transfer) {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->registerTransfer(transfer);
+		default :
+			return m_spiDma0->registerTransfer(transfer);
+		}
+	}
+
+
+	bool busy () {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->busy();
+		default :
+			return m_spiDma0->busy();
+		}
+	}
+
+	void stop () {
+		switch(m_spiSelect) {
+		case 1 : m_spiDma1->stop(); return;
+		default :
+			m_spiDma0->stop(); return;
+		}
+	}
+
+	bool stopping () {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->stopping();
+		default :
+			return m_spiDma0->stopping();
+		}
+	}
+
+	bool stopped () {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->stopped();
+		default :
+			return m_spiDma0->stopped();
+		}
+	}
+
+	void end () {
+		switch(m_spiSelect) {
+		case 1 : m_spiDma1->end(); return;
+		default :
+			m_spiDma0->end(); return;
+		}
+	}
+
+	uint8_t devNull () {
+		switch(m_spiSelect) {
+		case 1 : return m_spiDma1->devNull();
+		default :
+			return m_spiDma0->devNull();
+		}
+	}
+
+private:
+	int m_spiSelect = 0;
+	DmaSpi0 *m_spiDma0 = nullptr;
+	DmaSpi1 *m_spiDma1 = nullptr;
+
+};
+
 
 #endif // DMASPI_H
