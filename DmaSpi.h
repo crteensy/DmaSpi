@@ -761,10 +761,163 @@ private:
 extern DmaSpi0 DMASPI0;
 extern DmaSpi1 DMASPI1;
 
+#elif defined(__IMXRT1062__)
+class DmaSpi0 : public AbstractDmaSpi<DmaSpi0, SPIClass, SPI>
+{
+public:
+  static void begin_setup_txChannel_impl()
+  {
+    txChannel_()->disable();
+    txChannel_()->destination((volatile uint8_t&)IMXRT_LPSPI4_S.TDR);
+    txChannel_()->disableOnCompletion();
+    txChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_LPSPI4_TX);
+  }
+
+  static void begin_setup_rxChannel_impl()
+  {
+    rxChannel_()->disable();
+    rxChannel_()->source((volatile uint8_t&)IMXRT_LPSPI4_S.RDR);
+    rxChannel_()->disableOnCompletion();
+    rxChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_LPSPI4_RX);
+    rxChannel_()->attachInterrupt(rxIsr_);
+    rxChannel_()->interruptAtCompletion();
+  }
+
+  static void pre_cs_impl()
+  {
+    IMXRT_LPSPI4_S.TCR = (IMXRT_LPSPI4_S.TCR & ~(LPSPI_TCR_FRAMESZ(31))) | LPSPI_TCR_FRAMESZ(7);  
+    IMXRT_LPSPI4_S.FCR = 0; 
+
+    // Lets try to output the first byte to make sure that we are in 8 bit mode...
+    IMXRT_LPSPI4_S.DER = LPSPI_DER_TDDE | LPSPI_DER_RDDE; //enable DMA on both TX and RX
+    IMXRT_LPSPI4_S.SR = 0x3f00; // clear out all of the other status...
+  }
+
+  static void post_cs_impl()
+  {
+    rxChannel_()->enable();
+    txChannel_()->enable();
+  }
+
+  static void post_finishCurrentTransfer_impl()
+  {
+    IMXRT_LPSPI4_S.FCR = LPSPI_FCR_TXWATER(15); // _spi_fcr_save; // restore the FSR status... 
+    IMXRT_LPSPI4_S.DER = 0;   // DMA no longer doing TX (or RX)
+
+    IMXRT_LPSPI4_S.CR = LPSPI_CR_MEN | LPSPI_CR_RRF | LPSPI_CR_RTF;   // actually clear both...
+    IMXRT_LPSPI4_S.SR = 0x3f00; // clear out all of the other status...
+  }
+
+private:
+};
+
+extern DmaSpi0 DMASPI0;
+
+
+class DmaSpi1 : public AbstractDmaSpi<DmaSpi1, SPIClass, SPI1>
+{
+public:
+  static void begin_setup_txChannel_impl()
+  {
+    txChannel_()->disable();
+    txChannel_()->destination((volatile uint8_t&)IMXRT_LPSPI3_S.TDR);
+    txChannel_()->disableOnCompletion();
+    txChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_LPSPI3_TX);
+  }
+
+  static void begin_setup_rxChannel_impl()
+  {
+    rxChannel_()->disable();
+    rxChannel_()->source((volatile uint8_t&)IMXRT_LPSPI3_S.RDR);
+    rxChannel_()->disableOnCompletion();
+    rxChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_LPSPI3_RX);
+    rxChannel_()->attachInterrupt(rxIsr_);
+    rxChannel_()->interruptAtCompletion();
+  }
+
+  static void pre_cs_impl()
+  {
+    IMXRT_LPSPI3_S.TCR = (IMXRT_LPSPI3_S.TCR & ~(LPSPI_TCR_FRAMESZ(31))) | LPSPI_TCR_FRAMESZ(7);  
+    IMXRT_LPSPI3_S.FCR = 0; 
+
+    // Lets try to output the first byte to make sure that we are in 8 bit mode...
+    IMXRT_LPSPI3_S.DER = LPSPI_DER_TDDE | LPSPI_DER_RDDE; //enable DMA on both TX and RX
+    IMXRT_LPSPI3_S.SR = 0x3f00; // clear out all of the other status...
+  }
+
+  static void post_cs_impl()
+  {
+    rxChannel_()->enable();
+    txChannel_()->enable();
+  }
+
+  static void post_finishCurrentTransfer_impl()
+  {
+    IMXRT_LPSPI3_S.FCR = LPSPI_FCR_TXWATER(15); // _spi_fcr_save; // restore the FSR status... 
+    IMXRT_LPSPI3_S.DER = 0;   // DMA no longer doing TX (or RX)
+
+    IMXRT_LPSPI3_S.CR = LPSPI_CR_MEN | LPSPI_CR_RRF | LPSPI_CR_RTF;   // actually clear both...
+    IMXRT_LPSPI3_S.SR = 0x3f00; // clear out all of the other status...
+  }
+
+private:
+};
+
+class DmaSpi2 : public AbstractDmaSpi<DmaSpi2, SPIClass, SPI2>
+{
+public:
+  static void begin_setup_txChannel_impl()
+  {
+    txChannel_()->disable();
+    txChannel_()->destination((volatile uint8_t&)IMXRT_LPSPI1_S.TDR);
+    txChannel_()->disableOnCompletion();
+    txChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_LPSPI1_TX);
+  }
+
+  static void begin_setup_rxChannel_impl()
+  {
+    rxChannel_()->disable();
+    rxChannel_()->source((volatile uint8_t&)IMXRT_LPSPI1_S.RDR);
+    rxChannel_()->disableOnCompletion();
+    rxChannel_()->triggerAtHardwareEvent(DMAMUX_SOURCE_LPSPI1_RX);
+    rxChannel_()->attachInterrupt(rxIsr_);
+    rxChannel_()->interruptAtCompletion();
+  }
+
+  static void pre_cs_impl()
+  {
+    IMXRT_LPSPI1_S.TCR = (IMXRT_LPSPI1_S.TCR & ~(LPSPI_TCR_FRAMESZ(31))) | LPSPI_TCR_FRAMESZ(7);  
+    IMXRT_LPSPI1_S.FCR = 0; 
+
+    // Lets try to output the first byte to make sure that we are in 8 bit mode...
+    IMXRT_LPSPI1_S.DER = LPSPI_DER_TDDE | LPSPI_DER_RDDE; //enable DMA on both TX and RX
+    IMXRT_LPSPI1_S.SR = 0x3f00; // clear out all of the other status...
+  }
+
+  static void post_cs_impl()
+  {
+    rxChannel_()->enable();
+    txChannel_()->enable();
+  }
+
+  static void post_finishCurrentTransfer_impl()
+  {
+    IMXRT_LPSPI1_S.FCR = LPSPI_FCR_TXWATER(15); // _spi_fcr_save; // restore the FSR status... 
+    IMXRT_LPSPI1_S.DER = 0;   // DMA no longer doing TX (or RX)
+
+    IMXRT_LPSPI1_S.CR = LPSPI_CR_MEN | LPSPI_CR_RRF | LPSPI_CR_RTF;   // actually clear both...
+    IMXRT_LPSPI1_S.SR = 0x3f00; // clear out all of the other status...
+  }
+
+private:
+};
+
+extern DmaSpi1 DMASPI1;
+//extern DmaSpi2 DMASPI2;
 #else
 
 #error Unknown chip
 
-#endif // KINETISK else KINETISL 
+#endif // KINETISK else KINETISL else IMXRT
 
 #endif // DMASPI_H
