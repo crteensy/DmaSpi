@@ -9,5 +9,9 @@ DmaSpi1 DMASPI1;
 #elif defined (KINETISL)
 DmaSpi0 DMASPI0;
 DmaSpi1 DMASPI1;
+#elif defined(__IMXRT1062__)
+DmaSpi0 DMASPI0;
+DmaSpi1 DMASPI1;
+DmaSpi2 DMASPI2;
 #else 
 #endif // defined
