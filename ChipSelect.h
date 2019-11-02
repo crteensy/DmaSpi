@@ -84,6 +84,7 @@ class ActiveLowChipSelect : public AbstractChipSelect
 
 };
 
+#if defined(__MK64FX512__) || defined(__MK66FX1M0__) || defined(__IMXRT1062__) || defined(__MKL26Z64__)
 class ActiveLowChipSelect1 : public AbstractChipSelect
 {
   public:
@@ -118,5 +119,6 @@ class ActiveLowChipSelect1 : public AbstractChipSelect
 
 };
 
+#endif // SPI1 only on some hardware
 #endif // CHIPSELECT_H
 
